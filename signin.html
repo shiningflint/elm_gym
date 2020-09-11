@@ -1,0 +1,18 @@
+<html>
+  <head>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+    />
+  </head>
+  <body>
+    <div id="elm-app-id"></div>
+
+    <script src="signin.js"></script>
+    <script>
+      var app = Elm.SignIn.init({
+        node: document.getElementById("elm-app-id")
+      });
+    </script>
+  </body>
+</html>
