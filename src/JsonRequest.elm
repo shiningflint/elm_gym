@@ -11,7 +11,7 @@ import Json.Decode exposing (Decoder, decodeString, list, string)
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \flags -> ( [], Cmd.none )
+        { init = init
         , update = update
         , view = view
         , subscriptions = \_ -> Sub.none
@@ -23,12 +23,18 @@ main =
 
 
 type alias Model =
-    List String
+    { nicknames : List String
+    , errorMessage : String
+    }
 
 
-init : Model
-init =
-    []
+init : flags -> ( Model, Cmd Msg )
+init flags =
+    ( { nicknames = []
+      , errorMessage = ""
+      }
+    , Cmd.none
+    )
 
 
 
@@ -57,6 +63,25 @@ getNicknames =
         }
 
 
+httpErrorMessage : Http.Error -> String
+httpErrorMessage httpError =
+    case httpError of
+        Http.BadUrl err ->
+            err
+
+        Http.BadBody err ->
+            err
+
+        Http.BadStatus err ->
+            String.fromInt err
+
+        Http.Timeout ->
+            "Error timeout"
+
+        Http.NetworkError ->
+            "Network error"
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -64,10 +89,12 @@ update msg model =
             ( model, getNicknames )
 
         DataReceived (Ok nicknames) ->
-            ( nicknames, Cmd.none )
+            ( { model | nicknames = nicknames }
+            , Cmd.none
+            )
 
         DataReceived (Err httpError) ->
-            ( model, Cmd.none )
+            ( { model | errorMessage = httpErrorMessage httpError }, Cmd.none )
 
 
 
@@ -80,7 +107,8 @@ view model =
         [ button [ onClick SendHttpRequest ]
             [ text "Get data from server" ]
         , h3 [] [ text "Old School Main Characters" ]
-        , ul [] (List.map viewNickname model)
+        , ul [] (List.map viewNickname model.nicknames)
+        , p [] [ text model.errorMessage ]
         ]
 
 
