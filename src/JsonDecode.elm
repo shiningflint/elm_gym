@@ -1,5 +1,7 @@
 module JsonDecode exposing
-    ( goodResult
+    ( decodedGoodResult
+    , decodedNullResult
+    , goodResult
     , nullResult
     , spitNumbers
     )
@@ -20,18 +22,19 @@ goodResult =
 spitNumbers : Result Error (Maybe a) -> String
 spitNumbers result =
     case result of
-        Ok r ->
-            case r of
-                Nothing ->
-                    "Numbers got nothing"
+        Ok Nothing ->
+            "Numbers got nothing"
 
-                Just numbers ->
-                    "Got numbers"
+        Ok (Just numbers) ->
+            "Got numbers " ++ toString numbers
 
         Err _ ->
             "Got error"
 
 
+decodedGoodResult =
+    decodeString (field "numbers" (nullable (list int))) goodResult
 
--- spitNumbers ((decodeString (field "numbers" (nullable (list int)))) nullResult)
--- spitNumbers ((decodeString (field "numbers" (nullable (list int)))) goodResult)
+
+decodedNullResult =
+    decodeString (field "numbers" (nullable (list int))) nullResult
