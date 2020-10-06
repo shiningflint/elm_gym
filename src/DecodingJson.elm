@@ -49,7 +49,7 @@ postDecoder =
 httpCommand : Cmd Msg
 httpCommand =
     Http.get
-        { url = "http://localhost:3003/posts.json"
+        { url = "http://localhost:3003/posts"
         , expect = Http.expectJson DataReceived (list postDecoder)
         }
 

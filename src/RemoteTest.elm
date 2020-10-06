@@ -50,7 +50,7 @@ postDecoder =
 httpCommand : Cmd Msg
 httpCommand =
     Http.get
-        { url = "http://localhost:3003/posts.json"
+        { url = "http://localhost:3003/posts"
         , expect = Http.expectJson (RemoteData.fromResult >> RemoteDataReceived) (list postDecoder)
         }
 
@@ -59,7 +59,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SendHttpRequest ->
-            ( model, httpCommand )
+            ( { model | posts = Loading }, httpCommand )
 
         RemoteDataReceived response ->
             ( { model | posts = response }

@@ -1,17 +1,19 @@
-[
-  {
-    "id": 1,
-    "title": "json-server",
-    "author": "typicode"
-  },
-  {
-    "id": 2,
-    "title": "http-server",
-    "author": "typihttp"
-  },
-  {
-    "id": 3,
-    "title": "kentang-server",
-    "author": "typikentang"
-  }
-]
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "json-server",
+      "author": "typicode"
+    },
+    {
+      "id": 2,
+      "title": "http-server",
+      "author": "typihttp"
+    },
+    {
+      "id": 3,
+      "title": "kentang-server",
+      "author": "typikentang"
+    }
+  ]
+}
