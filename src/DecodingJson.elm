@@ -96,9 +96,40 @@ buildErrorMessage httpError =
 
 viewPost : Post -> Html Msg
 viewPost post =
+    tr []
+        [ td [] [ text (String.fromInt post.id) ]
+        , td [] [ text post.title ]
+        , td [] [ text post.author ]
+        ]
+
+
+viewTableHeader : Html Msg
+viewTableHeader =
+    tr []
+        [ th [] [ text "ID" ]
+        , th [] [ text "Title" ]
+        , th [] [ text "Author" ]
+        ]
+
+
+viewPosts : List Post -> Html Msg
+viewPosts posts =
     div []
-        [ h5 [] [ text post.title ]
-        , p [] [ text ("id: " ++ String.fromInt post.id ++ "  author: " ++ post.author) ]
+        [ h3 [] [ text "Posts" ]
+        , table []
+            ([ viewTableHeader ] ++ List.map viewPost posts)
+        ]
+
+
+viewError : String -> Html Msg
+viewError message =
+    let
+        errorHeading =
+            "Couldn't fetch data at this time"
+    in
+    div []
+        [ h3 [] [ text errorHeading ]
+        , text ("Error: " ++ message)
         ]
 
 
@@ -106,16 +137,10 @@ viewPostsOrError : Model -> Html Msg
 viewPostsOrError model =
     case model.errorMessage of
         Just message ->
-            div []
-                [ h3 [] [ text ("error here!! " ++ message) ]
-                ]
+            viewError message
 
         Nothing ->
-            div []
-                [ h3 [] [ text "Posts" ]
-                , div []
-                    (List.map viewPost model.posts)
-                ]
+            viewPosts model.posts
 
 
 view : Model -> Html Msg
