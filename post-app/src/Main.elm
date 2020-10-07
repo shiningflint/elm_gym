@@ -1,15 +1,15 @@
-module PostApp exposing (main)
+module Main exposing (main)
 
 import Browser
 import Html exposing (..)
 import Html.Events exposing (onClick)
 import Http
-import PostApp.Post
+import Post
 import RemoteData exposing (..)
 
 
 type alias Model =
-    { posts : WebData (List PostApp.Post.Post)
+    { posts : WebData (List Post.Post)
     , errorMessage : Maybe String
     }
 
@@ -20,14 +20,14 @@ type alias Model =
 
 type Msg
     = SendHttpRequest
-    | RemoteDataReceived (WebData (List PostApp.Post.Post))
+    | RemoteDataReceived (WebData (List Post.Post))
 
 
 httpCommand : Cmd Msg
 httpCommand =
     Http.get
         { url = "http://localhost:3003/posts"
-        , expect = Http.expectJson (RemoteData.fromResult >> RemoteDataReceived) PostApp.Post.postsDecoder
+        , expect = Http.expectJson (RemoteData.fromResult >> RemoteDataReceived) Post.postsDecoder
         }
 
 
@@ -66,7 +66,7 @@ buildErrorMessage httpError =
 -- VIEW
 
 
-viewPost : PostApp.Post.Post -> Html Msg
+viewPost : Post.Post -> Html Msg
 viewPost post =
     tr []
         [ td [] [ text (String.fromInt post.id) ]
@@ -84,7 +84,7 @@ viewTableHeader =
         ]
 
 
-viewPosts : List PostApp.Post.Post -> Html Msg
+viewPosts : List Post.Post -> Html Msg
 viewPosts posts =
     div []
         [ h3 [] [ text "Posts" ]
