@@ -1,3 +1,4 @@
 # ignoring distribution folder
-dist/*
+playground/dist/*
+post-app/dist/*
 elm-stuff
