@@ -1,0 +1,22 @@
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "First Post Without potate!!!!",
+      "authorName": "Mister kentang",
+      "authorUrl": "http://misterkentang.me"
+    },
+    {
+      "id": 2,
+      "title": "Melancholic Post",
+      "authorName": "Mister kentang",
+      "authorUrl": "http://misterkentang.me"
+    },
+    {
+      "id": 3,
+      "title": "Happy Post",
+      "authorName": "Mister kentang",
+      "authorUrl": "http://misterkentang.me"
+    }
+  ]
+}

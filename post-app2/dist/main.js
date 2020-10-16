@@ -1,17 +1,3 @@
-<!DOCTYPE HTML>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>RoutingOne</title>
-  <style>body { padding: 0; margin: 0; }</style>
-</head>
-
-<body>
-
-<pre id="elm"></pre>
-
-<script>
-try {
 (function(scope){
 'use strict';
 
@@ -4371,6 +4357,181 @@ function _Browser_load(url)
 }
 
 
+
+// SEND REQUEST
+
+var _Http_toTask = F3(function(router, toTask, request)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		function done(response) {
+			callback(toTask(request.expect.a(response)));
+		}
+
+		var xhr = new XMLHttpRequest();
+		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
+		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
+		xhr.addEventListener('load', function() { done(_Http_toResponse(request.expect.b, xhr)); });
+		$elm$core$Maybe$isJust(request.tracker) && _Http_track(router, xhr, request.tracker.a);
+
+		try {
+			xhr.open(request.method, request.url, true);
+		} catch (e) {
+			return done($elm$http$Http$BadUrl_(request.url));
+		}
+
+		_Http_configureRequest(xhr, request);
+
+		request.body.a && xhr.setRequestHeader('Content-Type', request.body.a);
+		xhr.send(request.body.b);
+
+		return function() { xhr.c = true; xhr.abort(); };
+	});
+});
+
+
+// CONFIGURE
+
+function _Http_configureRequest(xhr, request)
+{
+	for (var headers = request.headers; headers.b; headers = headers.b) // WHILE_CONS
+	{
+		xhr.setRequestHeader(headers.a.a, headers.a.b);
+	}
+	xhr.timeout = request.timeout.a || 0;
+	xhr.responseType = request.expect.d;
+	xhr.withCredentials = request.allowCookiesFromOtherDomains;
+}
+
+
+// RESPONSES
+
+function _Http_toResponse(toBody, xhr)
+{
+	return A2(
+		200 <= xhr.status && xhr.status < 300 ? $elm$http$Http$GoodStatus_ : $elm$http$Http$BadStatus_,
+		_Http_toMetadata(xhr),
+		toBody(xhr.response)
+	);
+}
+
+
+// METADATA
+
+function _Http_toMetadata(xhr)
+{
+	return {
+		url: xhr.responseURL,
+		statusCode: xhr.status,
+		statusText: xhr.statusText,
+		headers: _Http_parseHeaders(xhr.getAllResponseHeaders())
+	};
+}
+
+
+// HEADERS
+
+function _Http_parseHeaders(rawHeaders)
+{
+	if (!rawHeaders)
+	{
+		return $elm$core$Dict$empty;
+	}
+
+	var headers = $elm$core$Dict$empty;
+	var headerPairs = rawHeaders.split('\r\n');
+	for (var i = headerPairs.length; i--; )
+	{
+		var headerPair = headerPairs[i];
+		var index = headerPair.indexOf(': ');
+		if (index > 0)
+		{
+			var key = headerPair.substring(0, index);
+			var value = headerPair.substring(index + 2);
+
+			headers = A3($elm$core$Dict$update, key, function(oldValue) {
+				return $elm$core$Maybe$Just($elm$core$Maybe$isJust(oldValue)
+					? value + ', ' + oldValue.a
+					: value
+				);
+			}, headers);
+		}
+	}
+	return headers;
+}
+
+
+// EXPECT
+
+var _Http_expect = F3(function(type, toBody, toValue)
+{
+	return {
+		$: 0,
+		d: type,
+		b: toBody,
+		a: toValue
+	};
+});
+
+var _Http_mapExpect = F2(function(func, expect)
+{
+	return {
+		$: 0,
+		d: expect.d,
+		b: expect.b,
+		a: function(x) { return func(expect.a(x)); }
+	};
+});
+
+function _Http_toDataView(arrayBuffer)
+{
+	return new DataView(arrayBuffer);
+}
+
+
+// BODY and PARTS
+
+var _Http_emptyBody = { $: 0 };
+var _Http_pair = F2(function(a, b) { return { $: 0, a: a, b: b }; });
+
+function _Http_toFormData(parts)
+{
+	for (var formData = new FormData(); parts.b; parts = parts.b) // WHILE_CONS
+	{
+		var part = parts.a;
+		formData.append(part.a, part.b);
+	}
+	return formData;
+}
+
+var _Http_bytesToBlob = F2(function(mime, bytes)
+{
+	return new Blob([bytes], { type: mime });
+});
+
+
+// PROGRESS
+
+function _Http_track(router, xhr, tracker)
+{
+	// TODO check out lengthComputable on loadstart event
+
+	xhr.upload.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
+			sent: event.loaded,
+			size: event.total
+		}))));
+	});
+	xhr.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
+			received: event.loaded,
+			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+		}))));
+	});
+}
+
 function _Url_percentEncode(string)
 {
 	return encodeURIComponent(string);
@@ -4386,10 +4547,10 @@ function _Url_percentDecode(string)
 	{
 		return $elm$core$Maybe$Nothing;
 	}
-}var $author$project$RoutingOne$LinkClicked = function (a) {
+}var $author$project$Main$LinkClicked = function (a) {
 	return {$: 'LinkClicked', a: a};
 };
-var $author$project$RoutingOne$UrlChanged = function (a) {
+var $author$project$Main$UrlChanged = function (a) {
 	return {$: 'UrlChanged', a: a};
 };
 var $elm$core$Basics$EQ = {$: 'EQ'};
@@ -5181,116 +5342,53 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$application = _Browser_application;
-var $author$project$RoutingOne$NotFoundPage = {$: 'NotFoundPage'};
-var $author$project$RoutingOne$HomePage = {$: 'HomePage'};
-var $author$project$RoutingOne$PostsPage = function (a) {
-	return {$: 'PostsPage', a: a};
+var $author$project$Main$NotFoundPage = {$: 'NotFoundPage'};
+var $author$project$Main$ListPage = function (a) {
+	return {$: 'ListPage', a: a};
 };
-var $author$project$PostsOne$Post = F2(
-	function (id, title) {
-		return {id: id, title: title};
-	});
+var $author$project$Main$ListPageMsg = function (a) {
+	return {$: 'ListPageMsg', a: a};
+};
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$PostsOne$init = _Utils_Tuple2(
-	{
-		post: A2($author$project$PostsOne$Post, 0, 'Fake title here bananas')
-	},
-	$elm$core$Platform$Cmd$none);
-var $author$project$RoutingOne$initCurrentPage = function (_v0) {
-	var model = _v0.a;
-	var command = _v0.b;
-	var _v1 = function () {
-		var _v2 = model.route;
-		switch (_v2.$) {
-			case 'NotFound':
-				return _Utils_Tuple2($author$project$RoutingOne$NotFoundPage, $elm$core$Platform$Cmd$none);
-			case 'Home':
-				return _Utils_Tuple2($author$project$RoutingOne$HomePage, $elm$core$Platform$Cmd$none);
-			default:
-				var _v3 = $author$project$PostsOne$init;
-				var postModel = _v3.a;
-				var postCmd = _v3.b;
-				return _Utils_Tuple2(
-					$author$project$RoutingOne$PostsPage(postModel),
-					$elm$core$Platform$Cmd$none);
-		}
-	}();
-	var currentPage = _v1.a;
-	var currentCommand = _v1.b;
-	return _Utils_Tuple2(
-		_Utils_update(
-			model,
-			{page: currentPage}),
-		currentCommand);
+var $krisajenkins$remotedata$RemoteData$Loading = {$: 'Loading'};
+var $author$project$Page$ListPosts$PostsReceived = function (a) {
+	return {$: 'PostsReceived', a: a};
 };
-var $author$project$RouteOne$NotFound = {$: 'NotFound'};
-var $elm$url$Url$Parser$State = F5(
-	function (visited, unvisited, params, frag, value) {
-		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
 	});
-var $elm$url$Url$Parser$getFirstMatch = function (states) {
-	getFirstMatch:
-	while (true) {
-		if (!states.b) {
-			return $elm$core$Maybe$Nothing;
-		} else {
-			var state = states.a;
-			var rest = states.b;
-			var _v1 = state.unvisited;
-			if (!_v1.b) {
-				return $elm$core$Maybe$Just(state.value);
-			} else {
-				if ((_v1.a === '') && (!_v1.b.b)) {
-					return $elm$core$Maybe$Just(state.value);
-				} else {
-					var $temp$states = rest;
-					states = $temp$states;
-					continue getFirstMatch;
-				}
-			}
-		}
-	}
-};
-var $elm$url$Url$Parser$removeFinalEmpty = function (segments) {
-	if (!segments.b) {
-		return _List_Nil;
-	} else {
-		if ((segments.a === '') && (!segments.b.b)) {
-			return _List_Nil;
-		} else {
-			var segment = segments.a;
-			var rest = segments.b;
-			return A2(
-				$elm$core$List$cons,
-				segment,
-				$elm$url$Url$Parser$removeFinalEmpty(rest));
-		}
-	}
-};
-var $elm$url$Url$Parser$preparePath = function (path) {
-	var _v0 = A2($elm$core$String$split, '/', path);
-	if (_v0.b && (_v0.a === '')) {
-		var segments = _v0.b;
-		return $elm$url$Url$Parser$removeFinalEmpty(segments);
-	} else {
-		var segments = _v0;
-		return $elm$url$Url$Parser$removeFinalEmpty(segments);
-	}
-};
-var $elm$url$Url$Parser$addToParametersHelp = F2(
-	function (value, maybeList) {
-		if (maybeList.$ === 'Nothing') {
-			return $elm$core$Maybe$Just(
-				_List_fromArray(
-					[value]));
-		} else {
-			var list = maybeList.a;
-			return $elm$core$Maybe$Just(
-				A2($elm$core$List$cons, value, list));
-		}
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
+var $elm$http$Http$BadStatus_ = F2(
+	function (a, b) {
+		return {$: 'BadStatus_', a: a, b: b};
 	});
-var $elm$url$Url$percentDecode = _Url_percentDecode;
+var $elm$http$Http$BadUrl_ = function (a) {
+	return {$: 'BadUrl_', a: a};
+};
+var $elm$http$Http$GoodStatus_ = F2(
+	function (a, b) {
+		return {$: 'GoodStatus_', a: a, b: b};
+	});
+var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
+var $elm$http$Http$Receiving = function (a) {
+	return {$: 'Receiving', a: a};
+};
+var $elm$http$Http$Sending = function (a) {
+	return {$: 'Sending', a: a};
+};
+var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Maybe$isJust = function (maybe) {
+	if (maybe.$ === 'Just') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
 var $elm$core$Basics$compare = _Utils_compare;
 var $elm$core$Dict$get = F2(
 	function (targetKey, dict) {
@@ -5328,7 +5426,6 @@ var $elm$core$Dict$RBNode_elm_builtin = F5(
 	function (a, b, c, d, e) {
 		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
 	});
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
 var $elm$core$Dict$Red = {$: 'Red'};
 var $elm$core$Dict$balance = F5(
 	function (color, key, value, left, right) {
@@ -5805,65 +5902,346 @@ var $elm$core$Dict$update = F3(
 			return A2($elm$core$Dict$remove, targetKey, dictionary);
 		}
 	});
-var $elm$url$Url$Parser$addParam = F2(
-	function (segment, dict) {
-		var _v0 = A2($elm$core$String$split, '=', segment);
-		if ((_v0.b && _v0.b.b) && (!_v0.b.b.b)) {
-			var rawKey = _v0.a;
-			var _v1 = _v0.b;
-			var rawValue = _v1.a;
-			var _v2 = $elm$url$Url$percentDecode(rawKey);
-			if (_v2.$ === 'Nothing') {
-				return dict;
-			} else {
-				var key = _v2.a;
-				var _v3 = $elm$url$Url$percentDecode(rawValue);
-				if (_v3.$ === 'Nothing') {
-					return dict;
-				} else {
-					var value = _v3.a;
-					return A3(
-						$elm$core$Dict$update,
-						key,
-						$elm$url$Url$Parser$addToParametersHelp(value),
-						dict);
-				}
-			}
+var $elm$http$Http$expectStringResponse = F2(
+	function (toMsg, toResult) {
+		return A3(
+			_Http_expect,
+			'',
+			$elm$core$Basics$identity,
+			A2($elm$core$Basics$composeR, toResult, toMsg));
+	});
+var $elm$core$Result$mapError = F2(
+	function (f, result) {
+		if (result.$ === 'Ok') {
+			var v = result.a;
+			return $elm$core$Result$Ok(v);
 		} else {
-			return dict;
+			var e = result.a;
+			return $elm$core$Result$Err(
+				f(e));
 		}
 	});
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
-var $elm$url$Url$Parser$prepareQuery = function (maybeQuery) {
-	if (maybeQuery.$ === 'Nothing') {
-		return $elm$core$Dict$empty;
+var $elm$http$Http$BadBody = function (a) {
+	return {$: 'BadBody', a: a};
+};
+var $elm$http$Http$BadStatus = function (a) {
+	return {$: 'BadStatus', a: a};
+};
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
+var $elm$http$Http$resolve = F2(
+	function (toResult, response) {
+		switch (response.$) {
+			case 'BadUrl_':
+				var url = response.a;
+				return $elm$core$Result$Err(
+					$elm$http$Http$BadUrl(url));
+			case 'Timeout_':
+				return $elm$core$Result$Err($elm$http$Http$Timeout);
+			case 'NetworkError_':
+				return $elm$core$Result$Err($elm$http$Http$NetworkError);
+			case 'BadStatus_':
+				var metadata = response.a;
+				return $elm$core$Result$Err(
+					$elm$http$Http$BadStatus(metadata.statusCode));
+			default:
+				var body = response.b;
+				return A2(
+					$elm$core$Result$mapError,
+					$elm$http$Http$BadBody,
+					toResult(body));
+		}
+	});
+var $elm$http$Http$expectJson = F2(
+	function (toMsg, decoder) {
+		return A2(
+			$elm$http$Http$expectStringResponse,
+			toMsg,
+			$elm$http$Http$resolve(
+				function (string) {
+					return A2(
+						$elm$core$Result$mapError,
+						$elm$json$Json$Decode$errorToString,
+						A2($elm$json$Json$Decode$decodeString, decoder, string));
+				}));
+	});
+var $krisajenkins$remotedata$RemoteData$Failure = function (a) {
+	return {$: 'Failure', a: a};
+};
+var $krisajenkins$remotedata$RemoteData$Success = function (a) {
+	return {$: 'Success', a: a};
+};
+var $krisajenkins$remotedata$RemoteData$fromResult = function (result) {
+	if (result.$ === 'Err') {
+		var e = result.a;
+		return $krisajenkins$remotedata$RemoteData$Failure(e);
 	} else {
-		var qry = maybeQuery.a;
-		return A3(
-			$elm$core$List$foldr,
-			$elm$url$Url$Parser$addParam,
-			$elm$core$Dict$empty,
-			A2($elm$core$String$split, '&', qry));
+		var x = result.a;
+		return $krisajenkins$remotedata$RemoteData$Success(x);
 	}
 };
-var $elm$url$Url$Parser$parse = F2(
-	function (_v0, url) {
-		var parser = _v0.a;
-		return $elm$url$Url$Parser$getFirstMatch(
-			parser(
-				A5(
-					$elm$url$Url$Parser$State,
-					_List_Nil,
-					$elm$url$Url$Parser$preparePath(url.path),
-					$elm$url$Url$Parser$prepareQuery(url.query),
-					url.fragment,
-					$elm$core$Basics$identity)));
+var $elm$http$Http$emptyBody = _Http_emptyBody;
+var $elm$http$Http$Request = function (a) {
+	return {$: 'Request', a: a};
+};
+var $elm$http$Http$State = F2(
+	function (reqs, subs) {
+		return {reqs: reqs, subs: subs};
 	});
-var $author$project$RouteOne$Home = {$: 'Home'};
-var $author$project$RouteOne$Posts = {$: 'Posts'};
+var $elm$http$Http$init = $elm$core$Task$succeed(
+	A2($elm$http$Http$State, $elm$core$Dict$empty, _List_Nil));
+var $elm$core$Process$kill = _Scheduler_kill;
+var $elm$core$Process$spawn = _Scheduler_spawn;
+var $elm$http$Http$updateReqs = F3(
+	function (router, cmds, reqs) {
+		updateReqs:
+		while (true) {
+			if (!cmds.b) {
+				return $elm$core$Task$succeed(reqs);
+			} else {
+				var cmd = cmds.a;
+				var otherCmds = cmds.b;
+				if (cmd.$ === 'Cancel') {
+					var tracker = cmd.a;
+					var _v2 = A2($elm$core$Dict$get, tracker, reqs);
+					if (_v2.$ === 'Nothing') {
+						var $temp$router = router,
+							$temp$cmds = otherCmds,
+							$temp$reqs = reqs;
+						router = $temp$router;
+						cmds = $temp$cmds;
+						reqs = $temp$reqs;
+						continue updateReqs;
+					} else {
+						var pid = _v2.a;
+						return A2(
+							$elm$core$Task$andThen,
+							function (_v3) {
+								return A3(
+									$elm$http$Http$updateReqs,
+									router,
+									otherCmds,
+									A2($elm$core$Dict$remove, tracker, reqs));
+							},
+							$elm$core$Process$kill(pid));
+					}
+				} else {
+					var req = cmd.a;
+					return A2(
+						$elm$core$Task$andThen,
+						function (pid) {
+							var _v4 = req.tracker;
+							if (_v4.$ === 'Nothing') {
+								return A3($elm$http$Http$updateReqs, router, otherCmds, reqs);
+							} else {
+								var tracker = _v4.a;
+								return A3(
+									$elm$http$Http$updateReqs,
+									router,
+									otherCmds,
+									A3($elm$core$Dict$insert, tracker, pid, reqs));
+							}
+						},
+						$elm$core$Process$spawn(
+							A3(
+								_Http_toTask,
+								router,
+								$elm$core$Platform$sendToApp(router),
+								req)));
+				}
+			}
+		}
+	});
+var $elm$http$Http$onEffects = F4(
+	function (router, cmds, subs, state) {
+		return A2(
+			$elm$core$Task$andThen,
+			function (reqs) {
+				return $elm$core$Task$succeed(
+					A2($elm$http$Http$State, reqs, subs));
+			},
+			A3($elm$http$Http$updateReqs, router, cmds, state.reqs));
+	});
+var $elm$core$List$maybeCons = F3(
+	function (f, mx, xs) {
+		var _v0 = f(mx);
+		if (_v0.$ === 'Just') {
+			var x = _v0.a;
+			return A2($elm$core$List$cons, x, xs);
+		} else {
+			return xs;
+		}
+	});
+var $elm$core$List$filterMap = F2(
+	function (f, xs) {
+		return A3(
+			$elm$core$List$foldr,
+			$elm$core$List$maybeCons(f),
+			_List_Nil,
+			xs);
+	});
+var $elm$http$Http$maybeSend = F4(
+	function (router, desiredTracker, progress, _v0) {
+		var actualTracker = _v0.a;
+		var toMsg = _v0.b;
+		return _Utils_eq(desiredTracker, actualTracker) ? $elm$core$Maybe$Just(
+			A2(
+				$elm$core$Platform$sendToApp,
+				router,
+				toMsg(progress))) : $elm$core$Maybe$Nothing;
+	});
+var $elm$http$Http$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var tracker = _v0.a;
+		var progress = _v0.b;
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$filterMap,
+					A3($elm$http$Http$maybeSend, router, tracker, progress),
+					state.subs)));
+	});
+var $elm$http$Http$Cancel = function (a) {
+	return {$: 'Cancel', a: a};
+};
+var $elm$http$Http$cmdMap = F2(
+	function (func, cmd) {
+		if (cmd.$ === 'Cancel') {
+			var tracker = cmd.a;
+			return $elm$http$Http$Cancel(tracker);
+		} else {
+			var r = cmd.a;
+			return $elm$http$Http$Request(
+				{
+					allowCookiesFromOtherDomains: r.allowCookiesFromOtherDomains,
+					body: r.body,
+					expect: A2(_Http_mapExpect, func, r.expect),
+					headers: r.headers,
+					method: r.method,
+					timeout: r.timeout,
+					tracker: r.tracker,
+					url: r.url
+				});
+		}
+	});
+var $elm$http$Http$MySub = F2(
+	function (a, b) {
+		return {$: 'MySub', a: a, b: b};
+	});
+var $elm$http$Http$subMap = F2(
+	function (func, _v0) {
+		var tracker = _v0.a;
+		var toMsg = _v0.b;
+		return A2(
+			$elm$http$Http$MySub,
+			tracker,
+			A2($elm$core$Basics$composeR, toMsg, func));
+	});
+_Platform_effectManagers['Http'] = _Platform_createManager($elm$http$Http$init, $elm$http$Http$onEffects, $elm$http$Http$onSelfMsg, $elm$http$Http$cmdMap, $elm$http$Http$subMap);
+var $elm$http$Http$command = _Platform_leaf('Http');
+var $elm$http$Http$subscription = _Platform_leaf('Http');
+var $elm$http$Http$request = function (r) {
+	return $elm$http$Http$command(
+		$elm$http$Http$Request(
+			{allowCookiesFromOtherDomains: false, body: r.body, expect: r.expect, headers: r.headers, method: r.method, timeout: r.timeout, tracker: r.tracker, url: r.url}));
+};
+var $elm$http$Http$get = function (r) {
+	return $elm$http$Http$request(
+		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Post$Post = F4(
+	function (id, title, authorName, authorUrl) {
+		return {authorName: authorName, authorUrl: authorUrl, id: id, title: title};
+	});
+var $author$project$Post$PostId = function (a) {
+	return {$: 'PostId', a: a};
+};
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $author$project$Post$idDecoder = A2($elm$json$Json$Decode$map, $author$project$Post$PostId, $elm$json$Json$Decode$int);
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
+	function (key, valDecoder, decoder) {
+		return A2(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
+			A2($elm$json$Json$Decode$field, key, valDecoder),
+			decoder);
+	});
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $author$project$Post$postDecoder = A3(
+	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+	'authorUrl',
+	$elm$json$Json$Decode$string,
+	A3(
+		$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+		'authorName',
+		$elm$json$Json$Decode$string,
+		A3(
+			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+			'title',
+			$elm$json$Json$Decode$string,
+			A3(
+				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
+				'id',
+				$author$project$Post$idDecoder,
+				$elm$json$Json$Decode$succeed($author$project$Post$Post)))));
+var $author$project$Post$postsDecoder = $elm$json$Json$Decode$list($author$project$Post$postDecoder);
+var $author$project$Page$ListPosts$fetchPosts = $elm$http$Http$get(
+	{
+		expect: A2(
+			$elm$http$Http$expectJson,
+			A2($elm$core$Basics$composeR, $krisajenkins$remotedata$RemoteData$fromResult, $author$project$Page$ListPosts$PostsReceived),
+			$author$project$Post$postsDecoder),
+		url: 'http://localhost:3003/posts/'
+	});
+var $author$project$Page$ListPosts$init = _Utils_Tuple2(
+	{posts: $krisajenkins$remotedata$RemoteData$Loading},
+	$author$project$Page$ListPosts$fetchPosts);
+var $elm$core$Platform$Cmd$map = _Platform_map;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $author$project$Main$initCurrentPage = function (_v0) {
+	var model = _v0.a;
+	var existingCmds = _v0.b;
+	var _v1 = function () {
+		var _v2 = model.route;
+		if (_v2.$ === 'NotFound') {
+			return _Utils_Tuple2($author$project$Main$NotFoundPage, $elm$core$Platform$Cmd$none);
+		} else {
+			var _v3 = $author$project$Page$ListPosts$init;
+			var pageModel = _v3.a;
+			var pageCmds = _v3.b;
+			return _Utils_Tuple2(
+				$author$project$Main$ListPage(pageModel),
+				A2($elm$core$Platform$Cmd$map, $author$project$Main$ListPageMsg, pageCmds));
+		}
+	}();
+	var currentPage = _v1.a;
+	var mappedPageCmds = _v1.b;
+	return _Utils_Tuple2(
+		_Utils_update(
+			model,
+			{page: currentPage}),
+		$elm$core$Platform$Cmd$batch(
+			_List_fromArray(
+				[existingCmds, mappedPageCmds])));
+};
+var $author$project$Route$NotFound = {$: 'NotFound'};
+var $author$project$Route$Posts = {$: 'Posts'};
 var $elm$url$Url$Parser$Parser = function (a) {
 	return {$: 'Parser', a: a};
 };
+var $elm$url$Url$Parser$State = F5(
+	function (visited, unvisited, params, frag, value) {
+		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
+	});
 var $elm$url$Url$Parser$mapState = F2(
 	function (func, _v0) {
 		var visited = _v0.visited;
@@ -5955,47 +6333,151 @@ var $elm$url$Url$Parser$top = $elm$url$Url$Parser$Parser(
 		return _List_fromArray(
 			[state]);
 	});
-var $author$project$RouteOne$routeList = $elm$url$Url$Parser$oneOf(
+var $author$project$Route$matchRoute = $elm$url$Url$Parser$oneOf(
 	_List_fromArray(
 		[
-			A2($elm$url$Url$Parser$map, $author$project$RouteOne$Home, $elm$url$Url$Parser$top),
+			A2($elm$url$Url$Parser$map, $author$project$Route$Posts, $elm$url$Url$Parser$top),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$RouteOne$Posts,
+			$author$project$Route$Posts,
 			$elm$url$Url$Parser$s('posts'))
 		]));
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
+var $elm$url$Url$Parser$getFirstMatch = function (states) {
+	getFirstMatch:
+	while (true) {
+		if (!states.b) {
+			return $elm$core$Maybe$Nothing;
 		} else {
-			return _default;
+			var state = states.a;
+			var rest = states.b;
+			var _v1 = state.unvisited;
+			if (!_v1.b) {
+				return $elm$core$Maybe$Just(state.value);
+			} else {
+				if ((_v1.a === '') && (!_v1.b.b)) {
+					return $elm$core$Maybe$Just(state.value);
+				} else {
+					var $temp$states = rest;
+					states = $temp$states;
+					continue getFirstMatch;
+				}
+			}
+		}
+	}
+};
+var $elm$url$Url$Parser$removeFinalEmpty = function (segments) {
+	if (!segments.b) {
+		return _List_Nil;
+	} else {
+		if ((segments.a === '') && (!segments.b.b)) {
+			return _List_Nil;
+		} else {
+			var segment = segments.a;
+			var rest = segments.b;
+			return A2(
+				$elm$core$List$cons,
+				segment,
+				$elm$url$Url$Parser$removeFinalEmpty(rest));
+		}
+	}
+};
+var $elm$url$Url$Parser$preparePath = function (path) {
+	var _v0 = A2($elm$core$String$split, '/', path);
+	if (_v0.b && (_v0.a === '')) {
+		var segments = _v0.b;
+		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+	} else {
+		var segments = _v0;
+		return $elm$url$Url$Parser$removeFinalEmpty(segments);
+	}
+};
+var $elm$url$Url$Parser$addToParametersHelp = F2(
+	function (value, maybeList) {
+		if (maybeList.$ === 'Nothing') {
+			return $elm$core$Maybe$Just(
+				_List_fromArray(
+					[value]));
+		} else {
+			var list = maybeList.a;
+			return $elm$core$Maybe$Just(
+				A2($elm$core$List$cons, value, list));
 		}
 	});
-var $author$project$RouteOne$toRoute = function (url) {
-	return A2(
-		$elm$core$Maybe$withDefault,
-		$author$project$RouteOne$NotFound,
-		A2($elm$url$Url$Parser$parse, $author$project$RouteOne$routeList, url));
+var $elm$url$Url$percentDecode = _Url_percentDecode;
+var $elm$url$Url$Parser$addParam = F2(
+	function (segment, dict) {
+		var _v0 = A2($elm$core$String$split, '=', segment);
+		if ((_v0.b && _v0.b.b) && (!_v0.b.b.b)) {
+			var rawKey = _v0.a;
+			var _v1 = _v0.b;
+			var rawValue = _v1.a;
+			var _v2 = $elm$url$Url$percentDecode(rawKey);
+			if (_v2.$ === 'Nothing') {
+				return dict;
+			} else {
+				var key = _v2.a;
+				var _v3 = $elm$url$Url$percentDecode(rawValue);
+				if (_v3.$ === 'Nothing') {
+					return dict;
+				} else {
+					var value = _v3.a;
+					return A3(
+						$elm$core$Dict$update,
+						key,
+						$elm$url$Url$Parser$addToParametersHelp(value),
+						dict);
+				}
+			}
+		} else {
+			return dict;
+		}
+	});
+var $elm$url$Url$Parser$prepareQuery = function (maybeQuery) {
+	if (maybeQuery.$ === 'Nothing') {
+		return $elm$core$Dict$empty;
+	} else {
+		var qry = maybeQuery.a;
+		return A3(
+			$elm$core$List$foldr,
+			$elm$url$Url$Parser$addParam,
+			$elm$core$Dict$empty,
+			A2($elm$core$String$split, '&', qry));
+	}
 };
-var $author$project$RoutingOne$init = F3(
-	function (flags, url, key) {
-		return $author$project$RoutingOne$initCurrentPage(
-			_Utils_Tuple2(
-				{
-					counter: 0,
-					key: key,
-					page: $author$project$RoutingOne$NotFoundPage,
-					route: $author$project$RouteOne$toRoute(url)
-				},
-				$elm$core$Platform$Cmd$none));
+var $elm$url$Url$Parser$parse = F2(
+	function (_v0, url) {
+		var parser = _v0.a;
+		return $elm$url$Url$Parser$getFirstMatch(
+			parser(
+				A5(
+					$elm$url$Url$Parser$State,
+					_List_Nil,
+					$elm$url$Url$Parser$preparePath(url.path),
+					$elm$url$Url$Parser$prepareQuery(url.query),
+					url.fragment,
+					$elm$core$Basics$identity)));
+	});
+var $author$project$Route$parseUrl = function (url) {
+	var _v0 = A2($elm$url$Url$Parser$parse, $author$project$Route$matchRoute, url);
+	if (_v0.$ === 'Just') {
+		var route = _v0.a;
+		return route;
+	} else {
+		return $author$project$Route$NotFound;
+	}
+};
+var $author$project$Main$init = F3(
+	function (flags, url, navKey) {
+		var model = {
+			navKey: navKey,
+			page: $author$project$Main$NotFoundPage,
+			route: $author$project$Route$parseUrl(url)
+		};
+		return $author$project$Main$initCurrentPage(
+			_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
 	});
 var $elm$core$Platform$Sub$batch = _Platform_batch;
 var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$RoutingOne$subscriptions = function (_v0) {
-	return $elm$core$Platform$Sub$none;
-};
 var $elm$browser$Browser$Navigation$load = _Browser_load;
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $elm$url$Url$addPort = F2(
@@ -6042,38 +6524,139 @@ var $elm$url$Url$toString = function (url) {
 					_Utils_ap(http, url.host)),
 				url.path)));
 };
-var $author$project$RoutingOne$update = F2(
+var $author$project$Page$ListPosts$update = F2(
 	function (msg, model) {
-		if (msg.$ === 'UrlChanged') {
-			var url = msg.a;
-			return $author$project$RoutingOne$initCurrentPage(
-				_Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							route: $author$project$RouteOne$toRoute(url)
-						}),
-					$elm$core$Platform$Cmd$none));
-		} else {
-			var urlRequest = msg.a;
-			if (urlRequest.$ === 'Internal') {
-				var url = urlRequest.a;
-				var command = A2(
-					$elm$browser$Browser$Navigation$pushUrl,
-					model.key,
-					$elm$url$Url$toString(url));
-				return _Utils_Tuple2(model, command);
-			} else {
-				var url = urlRequest.a;
-				return _Utils_Tuple2(
+		if (msg.$ === 'FetchPosts') {
+			return _Utils_Tuple2(
+				_Utils_update(
 					model,
-					$elm$browser$Browser$Navigation$load(url));
-			}
+					{posts: $krisajenkins$remotedata$RemoteData$Loading}),
+				$author$project$Page$ListPosts$fetchPosts);
+		} else {
+			var response = msg.a;
+			return _Utils_Tuple2(
+				_Utils_update(
+					model,
+					{posts: response}),
+				$elm$core$Platform$Cmd$none);
 		}
 	});
-var $elm$html$Html$a = _VirtualDom_node('a');
-var $elm$html$Html$br = _VirtualDom_node('br');
+var $author$project$Main$update = F2(
+	function (msg, model) {
+		var _v0 = _Utils_Tuple2(msg, model.page);
+		switch (_v0.a.$) {
+			case 'ListPageMsg':
+				if (_v0.b.$ === 'ListPage') {
+					var subMsg = _v0.a.a;
+					var pageModel = _v0.b.a;
+					var _v1 = A2($author$project$Page$ListPosts$update, subMsg, pageModel);
+					var updatedPageModel = _v1.a;
+					var updatedCmd = _v1.b;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								page: $author$project$Main$ListPage(updatedPageModel)
+							}),
+						A2($elm$core$Platform$Cmd$map, $author$project$Main$ListPageMsg, updatedCmd));
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			case 'LinkClicked':
+				var urlRequest = _v0.a.a;
+				if (urlRequest.$ === 'Internal') {
+					var url = urlRequest.a;
+					return _Utils_Tuple2(
+						model,
+						A2(
+							$elm$browser$Browser$Navigation$pushUrl,
+							model.navKey,
+							$elm$url$Url$toString(url)));
+				} else {
+					var url = urlRequest.a;
+					return _Utils_Tuple2(
+						model,
+						$elm$browser$Browser$Navigation$load(url));
+				}
+			default:
+				var url = _v0.a.a;
+				var newRoute = $author$project$Route$parseUrl(url);
+				return $author$project$Main$initCurrentPage(
+					_Utils_Tuple2(
+						_Utils_update(
+							model,
+							{route: newRoute}),
+						$elm$core$Platform$Cmd$none));
+		}
+	});
+var $elm$virtual_dom$VirtualDom$map = _VirtualDom_map;
+var $elm$html$Html$map = $elm$virtual_dom$VirtualDom$map;
+var $elm$html$Html$h3 = _VirtualDom_node('h3');
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $author$project$Main$notFoundView = A2(
+	$elm$html$Html$h3,
+	_List_Nil,
+	_List_fromArray(
+		[
+			$elm$html$Html$text('Oops! The page you requested was not found!')
+		]));
+var $author$project$Page$ListPosts$FetchPosts = {$: 'FetchPosts'};
+var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$html$Html$div = _VirtualDom_node('div');
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $author$project$Page$ListPosts$buildErrorMessage = function (httpError) {
+	switch (httpError.$) {
+		case 'BadUrl':
+			var message = httpError.a;
+			return message;
+		case 'Timeout':
+			return 'Server is taking too long to respond. Please try again later.';
+		case 'NetworkError':
+			return 'Unable to reach server.';
+		case 'BadStatus':
+			var statusCode = httpError.a;
+			return 'Request failed with status code: ' + $elm$core$String$fromInt(statusCode);
+		default:
+			var message = httpError.a;
+			return message;
+	}
+};
+var $elm$html$Html$table = _VirtualDom_node('table');
+var $author$project$Page$ListPosts$viewFetchError = function (errorMessage) {
+	var errorHeading = 'Couldn\'t fetch posts at this time.';
+	return A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$h3,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(errorHeading)
+					])),
+				$elm$html$Html$text('Error: ' + errorMessage)
+			]));
+};
+var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
@@ -6088,160 +6671,169 @@ var $elm$html$Html$Attributes$href = function (url) {
 		'href',
 		_VirtualDom_noJavaScriptUri(url));
 };
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
-var $author$project$RoutingOne$homePage = A2(
-	$elm$html$Html$div,
+var $author$project$Post$idToString = function (_v0) {
+	var id = _v0.a;
+	return $elm$core$String$fromInt(id);
+};
+var $elm$html$Html$td = _VirtualDom_node('td');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $author$project$Page$ListPosts$viewPost = function (post) {
+	return A2(
+		$elm$html$Html$tr,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						$author$project$Post$idToString(post.id))
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(post.title)
+					])),
+				A2(
+				$elm$html$Html$td,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$a,
+						_List_fromArray(
+							[
+								$elm$html$Html$Attributes$href(post.authorUrl)
+							]),
+						_List_fromArray(
+							[
+								$elm$html$Html$text(post.authorName)
+							]))
+					]))
+			]));
+};
+var $elm$html$Html$th = _VirtualDom_node('th');
+var $author$project$Page$ListPosts$viewTableHeader = A2(
+	$elm$html$Html$tr,
 	_List_Nil,
 	_List_fromArray(
 		[
 			A2(
-			$elm$html$Html$div,
+			$elm$html$Html$th,
 			_List_Nil,
 			_List_fromArray(
 				[
-					$elm$html$Html$text('This is the homepage')
+					$elm$html$Html$text('ID')
 				])),
 			A2(
-			$elm$html$Html$a,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$href('/notfoundpage')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('go to a 404 page')
-				])),
-			A2($elm$html$Html$br, _List_Nil, _List_Nil),
-			A2(
-			$elm$html$Html$a,
-			_List_fromArray(
-				[
-					$elm$html$Html$Attributes$href('/posts')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('Posts page')
-				]))
-		]));
-var $author$project$RoutingOne$notFoundPage = A2(
-	$elm$html$Html$div,
-	_List_Nil,
-	_List_fromArray(
-		[
-			A2(
-			$elm$html$Html$div,
+			$elm$html$Html$th,
 			_List_Nil,
 			_List_fromArray(
 				[
-					$elm$html$Html$text('Page not found!')
+					$elm$html$Html$text('Title')
 				])),
 			A2(
-			$elm$html$Html$a,
+			$elm$html$Html$th,
+			_List_Nil,
 			_List_fromArray(
 				[
-					$elm$html$Html$Attributes$href('/')
-				]),
-			_List_fromArray(
-				[
-					$elm$html$Html$text('Take me back to home')
+					$elm$html$Html$text('Author')
 				]))
 		]));
-var $elm$html$Html$button = _VirtualDom_node('button');
-var $elm$html$Html$p = _VirtualDom_node('p');
-var $author$project$PostsOne$view = function (model) {
+var $author$project$Page$ListPosts$viewPosts = function (posts) {
+	switch (posts.$) {
+		case 'NotAsked':
+			return $elm$html$Html$text('');
+		case 'Loading':
+			return A2(
+				$elm$html$Html$h3,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Loading...')
+					]));
+		case 'Success':
+			var actualPosts = posts.a;
+			return A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$h3,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Posts')
+							])),
+						A2(
+						$elm$html$Html$table,
+						_List_Nil,
+						_Utils_ap(
+							_List_fromArray(
+								[$author$project$Page$ListPosts$viewTableHeader]),
+							A2($elm$core$List$map, $author$project$Page$ListPosts$viewPost, actualPosts)))
+					]));
+		default:
+			var httpError = posts.a;
+			return $author$project$Page$ListPosts$viewFetchError(
+				$author$project$Page$ListPosts$buildErrorMessage(httpError));
+	}
+};
+var $author$project$Page$ListPosts$view = function (model) {
 	return A2(
 		$elm$html$Html$div,
 		_List_Nil,
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text('Here are some posts')
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text('Le title')
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(model.post.title)
-					])),
-				A2(
 				$elm$html$Html$button,
-				_List_Nil,
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Load Posts')
-					])),
-				A2(
-				$elm$html$Html$p,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text('or')
-					])),
-				A2(
-				$elm$html$Html$a,
-				_List_fromArray(
-					[
-						$elm$html$Html$Attributes$href('/')
+						$elm$html$Html$Events$onClick($author$project$Page$ListPosts$FetchPosts)
 					]),
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Home page')
-					]))
+						$elm$html$Html$text('Refresh posts')
+					])),
+				$author$project$Page$ListPosts$viewPosts(model.posts)
 			]));
 };
-var $author$project$RoutingOne$routeView = function (model) {
+var $author$project$Main$currentView = function (model) {
 	var _v0 = model.page;
-	switch (_v0.$) {
-		case 'NotFoundPage':
-			return $author$project$RoutingOne$notFoundPage;
-		case 'HomePage':
-			return $author$project$RoutingOne$homePage;
-		default:
-			var postsModel = _v0.a;
-			return $author$project$PostsOne$view(postsModel);
+	if (_v0.$ === 'NotFoundPage') {
+		return $author$project$Main$notFoundView;
+	} else {
+		var pageModel = _v0.a;
+		return A2(
+			$elm$html$Html$map,
+			$author$project$Main$ListPageMsg,
+			$author$project$Page$ListPosts$view(pageModel));
 	}
 };
-var $author$project$RoutingOne$view = function (model) {
+var $author$project$Main$view = function (model) {
 	return {
 		body: _List_fromArray(
 			[
-				$author$project$RoutingOne$routeView(model)
+				$author$project$Main$currentView(model)
 			]),
-		title: 'My Routing App'
+		title: 'Post App'
 	};
 };
-var $author$project$RoutingOne$main = $elm$browser$Browser$application(
-	{init: $author$project$RoutingOne$init, onUrlChange: $author$project$RoutingOne$UrlChanged, onUrlRequest: $author$project$RoutingOne$LinkClicked, subscriptions: $author$project$RoutingOne$subscriptions, update: $author$project$RoutingOne$update, view: $author$project$RoutingOne$view});
-_Platform_export({'RoutingOne':{'init':$author$project$RoutingOne$main(
+var $author$project$Main$main = $elm$browser$Browser$application(
+	{
+		init: $author$project$Main$init,
+		onUrlChange: $author$project$Main$UrlChanged,
+		onUrlRequest: $author$project$Main$LinkClicked,
+		subscriptions: function (_v0) {
+			return $elm$core$Platform$Sub$none;
+		},
+		update: $author$project$Main$update,
+		view: $author$project$Main$view
+	});
+_Platform_export({'Main':{'init':$author$project$Main$main(
 	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
-
-  var app = Elm.RoutingOne.init({ node: document.getElementById("elm") });
-}
-catch (e)
-{
-  // display initialization errors (e.g. bad flags, infinite recursion)
-  var header = document.createElement("h1");
-  header.style.fontFamily = "monospace";
-  header.innerText = "Initialization Error";
-  var pre = document.getElementById("elm");
-  document.body.insertBefore(header, pre);
-  pre.innerText = e;
-  throw e;
-}
-</script>
-
-</body>
-</html>
