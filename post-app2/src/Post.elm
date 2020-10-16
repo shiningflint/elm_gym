@@ -1,8 +1,10 @@
 module Post exposing
     ( Post
     , PostId
+    , emptyPost
     , idParser
     , idToString
+    , newPostEncoder
     , postDecoder
     , postEncoder
     , postsDecoder
@@ -24,6 +26,20 @@ type alias Post =
 
 type PostId
     = PostId Int
+
+
+emptyPost : Post
+emptyPost =
+    { id = emptyPostId
+    , title = ""
+    , authorName = ""
+    , authorUrl = ""
+    }
+
+
+emptyPostId : PostId
+emptyPostId =
+    PostId -1
 
 
 idDecoder : Decoder PostId
@@ -48,6 +64,14 @@ postEncoder post =
     Encode.object
         [ ( "id", encodeId post.id )
         , ( "title", Encode.string post.title )
+        , ( "authorName", Encode.string post.authorName )
+        , ( "authorUrl", Encode.string post.authorUrl )
+        ]
+
+
+newPostEncoder post =
+    Encode.object
+        [ ( "title", Encode.string post.title )
         , ( "authorName", Encode.string post.authorName )
         , ( "authorUrl", Encode.string post.authorUrl )
         ]
