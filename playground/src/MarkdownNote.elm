@@ -2,6 +2,35 @@ module MarkdownNote exposing (main)
 
 import Browser
 import Css
+    exposing
+        ( auto
+        , backgroundColor
+        , borderStyle
+        , bottom
+        , calc
+        , column
+        , displayFlex
+        , fixed
+        , flexDirection
+        , fontFamilies
+        , hex
+        , margin4
+        , maxWidth
+        , minHeight
+        , minus
+        , none
+        , padding
+        , pct
+        , position
+        , preLine
+        , px
+        , resize
+        , right
+        , vertical
+        , whiteSpace
+        , width
+        )
+import Css.Global exposing (body, global, typeSelector)
 import Html
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (..)
@@ -43,6 +72,7 @@ type Msg
     = UpdateDocContent String
     | ToPreview
     | ToEdit
+    | DownloadDoc
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -57,66 +87,145 @@ update msg model =
         ToEdit ->
             ( { model | docView = Edit }, Cmd.none )
 
+        DownloadDoc ->
+            let
+                a =
+                    Debug.log "Downloading" ""
+            in
+            ( model, Cmd.none )
+
 
 
 -- VIEW
 
 
-plainTextArea : Model -> Html Msg
-plainTextArea model =
-    textarea
-        [ style "width" "600px"
-        , style "height" "300px"
-        , value (encodeDoc model.doc)
-        , onInput UpdateDocContent
+bodyBgColor : String
+bodyBgColor =
+    "2b323a"
+
+
+contentBgColor : String
+contentBgColor =
+    "e6e5e5"
+
+
+baseFontFamilies : List String
+baseFontFamilies =
+    [ "Arial", "Helvetica", "sans-serif" ]
+
+
+docContentStyle : Attribute msg
+docContentStyle =
+    let
+        paddingSpace =
+            16
+    in
+    css
+        [ resize vertical
+        , Css.width <|
+            calc (pct 100) minus <|
+                px (paddingSpace * 2)
+        , minHeight (px 500)
+        , borderStyle none
+        , padding (px paddingSpace)
+        , fontFamilies baseFontFamilies
+        , backgroundColor (hex contentBgColor)
         ]
-        []
 
 
 styledTextArea model =
     textarea
         [ value (encodeDoc model.doc)
         , onInput UpdateDocContent
+        , docContentStyle
         ]
         []
+
+
+styledDocPreview : Doc -> Html Msg
+styledDocPreview doc =
+    div [ docContentStyle ] <|
+        List.map (\h -> Html.Styled.fromUnstyled h) <|
+            Markdown.toHtml Nothing (encodeDoc doc)
+
+
+globalStyleNode : Html Msg
+globalStyleNode =
+    global
+        [ body
+            [ backgroundColor (hex bodyBgColor)
+            , fontFamilies baseFontFamilies
+            ]
+        , typeSelector "pre" [ whiteSpace preLine ]
+        ]
 
 
 docViewContent : Model -> Html Msg
 docViewContent model =
     case model.docView of
         Edit ->
-            -- plainTextArea model
             styledTextArea model
 
         Preview ->
-            div [] <|
-                List.map (\h -> Html.Styled.fromUnstyled h) <|
-                    Markdown.toHtml Nothing (encodeDoc model.doc)
+            styledDocPreview model.doc
+
+
+editPreviewButton docView =
+    case docView of
+        Edit ->
+            button
+                [ type_ "button"
+                , onClick ToPreview
+                ]
+                [ text "Preview" ]
+
+        Preview ->
+            button
+                [ type_ "button"
+                , onClick ToEdit
+                ]
+                [ text "Edit" ]
+
+
+controlPanel : Model -> Html Msg
+controlPanel model =
+    div
+        [ css
+            [ position fixed
+            , bottom (px 16)
+            , right (px 16)
+            , displayFlex
+            , flexDirection column
+            ]
+        ]
+        [ button
+            [ type_ "button"
+            , onClick DownloadDoc
+            ]
+            [ text "Download document" ]
+        , editPreviewButton model.docView
+        ]
 
 
 view : Model -> Html.Html Msg
 view model =
     div []
-        [ div []
-            [ button
-                [ type_ "button"
-                , onClick ToEdit
+        [ globalStyleNode
+        , div
+            [ css
+                [ maxWidth (px 600)
+                , margin4 (px 64) auto (px 0) auto
                 ]
-                [ text "Edit" ]
-            , button
-                [ type_ "button"
-                , onClick ToPreview
-                ]
-                [ text "Preview" ]
             ]
-        , div [] [ docViewContent model ]
+            [ docViewContent model ]
+        , controlPanel model
         ]
         |> Html.Styled.toUnstyled
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { doc = Doc "Kentang bakar panas"
+    ( { doc = Doc "# Title"
       , docView = Edit
       }
     , Cmd.none
