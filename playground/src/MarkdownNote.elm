@@ -1,10 +1,13 @@
 module MarkdownNote exposing (main)
 
 import Browser
-import Css exposing (..)
+import Css
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
+import Html.Styled
+import Html.Styled.Attributes
+import Html.Styled.Events
 import Markdown
 
 
@@ -61,28 +64,34 @@ update msg model =
 -- VIEW
 
 
-editStyle : List (Attribute msg)
-editStyle =
-    [ style "width" "600px"
-    , style "height" "300px"
-    ]
+plainTextArea : Model -> Html Msg
+plainTextArea model =
+    textarea
+        [ style "width" "600px"
+        , style "height" "300px"
+        , value (encodeDoc model.doc)
+        , onInput UpdateDocContent
+        ]
+        []
+
+
+styledTextArea model =
+    Html.Styled.textarea
+        [ Html.Styled.Attributes.value (encodeDoc model.doc)
+        , Html.Styled.Events.onInput UpdateDocContent
+        ]
+        []
 
 
 docViewContent : Model -> Html Msg
 docViewContent model =
     case model.docView of
         Edit ->
-            textarea
-                (editStyle
-                    ++ [ value (encodeDoc model.doc)
-                       , onInput UpdateDocContent
-                       ]
-                )
-                []
+            -- plainTextArea model
+            Html.Styled.toUnstyled (styledTextArea model)
 
         Preview ->
-            div [] <|
-                Markdown.toHtml Nothing (encodeDoc model.doc)
+            div [] <| Markdown.toHtml Nothing (encodeDoc model.doc)
 
 
 view : Model -> Html Msg
@@ -100,8 +109,7 @@ view model =
                 ]
                 [ text "Preview" ]
             ]
-        , div []
-            [ docViewContent model ]
+        , div [] [ docViewContent model ]
         ]
 
 
