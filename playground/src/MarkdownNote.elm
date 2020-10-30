@@ -2,12 +2,10 @@ module MarkdownNote exposing (main)
 
 import Browser
 import Css
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (..)
-import Html.Styled
-import Html.Styled.Attributes
-import Html.Styled.Events
+import Html
+import Html.Styled exposing (..)
+import Html.Styled.Attributes exposing (..)
+import Html.Styled.Events exposing (onClick, onInput)
 import Markdown
 
 
@@ -76,9 +74,9 @@ plainTextArea model =
 
 
 styledTextArea model =
-    Html.Styled.textarea
-        [ Html.Styled.Attributes.value (encodeDoc model.doc)
-        , Html.Styled.Events.onInput UpdateDocContent
+    textarea
+        [ value (encodeDoc model.doc)
+        , onInput UpdateDocContent
         ]
         []
 
@@ -88,13 +86,15 @@ docViewContent model =
     case model.docView of
         Edit ->
             -- plainTextArea model
-            Html.Styled.toUnstyled (styledTextArea model)
+            styledTextArea model
 
         Preview ->
-            div [] <| Markdown.toHtml Nothing (encodeDoc model.doc)
+            div [] <|
+                List.map (\h -> Html.Styled.fromUnstyled h) <|
+                    Markdown.toHtml Nothing (encodeDoc model.doc)
 
 
-view : Model -> Html Msg
+view : Model -> Html.Html Msg
 view model =
     div []
         [ div []
@@ -111,6 +111,7 @@ view model =
             ]
         , div [] [ docViewContent model ]
         ]
+        |> Html.Styled.toUnstyled
 
 
 init : () -> ( Model, Cmd Msg )
