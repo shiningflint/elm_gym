@@ -31,6 +31,7 @@ import Css
         , width
         )
 import Css.Global exposing (body, global, typeSelector)
+import File.Download as Download
 import Html
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (..)
@@ -75,6 +76,11 @@ type Msg
     | DownloadDoc
 
 
+saveDoc : String -> Cmd Msg
+saveDoc markdown =
+    Download.string "banana-doc.md" "text/markdown" markdown
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -88,11 +94,7 @@ update msg model =
             ( { model | docView = Edit }, Cmd.none )
 
         DownloadDoc ->
-            let
-                a =
-                    Debug.log "Downloading" ""
-            in
-            ( model, Cmd.none )
+            ( model, encodeDoc model.doc |> saveDoc )
 
 
 
