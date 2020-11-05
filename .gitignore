@@ -9,6 +9,7 @@ post-app2/dist/*
 post-app2/index.html
 
 paper/dist/*
+paper/dev.js
 paper/index.html
 
 elm-stuff
