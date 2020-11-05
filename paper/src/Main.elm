@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser
 import Css exposing (..)
 import Css.Global exposing (body, global, selector, typeSelector)
+import Css.Transitions as Transitions
 import Doc exposing (Doc(..))
 import File.Download as Download
 import Html
@@ -33,6 +34,7 @@ type alias Model =
     , docFilename : String
     , appTheme : AppTheme
     , showDialog : Bool
+    , showControlPanel : Bool
     }
 
 
@@ -47,6 +49,7 @@ type Msg
     | SwitchToThemeA
     | SwitchToThemeB
     | ToggleDownloadDocDialog
+    | ToggleControlPanel
     | DownloadDoc
     | UpdateFileName String
     | NoOp
@@ -81,6 +84,13 @@ update msg model =
                     not model.showDialog
             in
             ( { model | showDialog = updatedBool }, Cmd.none )
+
+        ToggleControlPanel ->
+            let
+                updatedBool =
+                    not model.showControlPanel
+            in
+            ( { model | showControlPanel = updatedBool }, Cmd.none )
 
         DownloadDoc ->
             ( model, Doc.encode model.doc |> saveDoc model.docFilename )
@@ -209,25 +219,53 @@ editPreviewButton docView =
                 [ text "Edit" ]
 
 
+controlPanelToggleButton =
+    button
+        [ type_ "button"
+        , onClick ToggleControlPanel
+        , css
+            [ position absolute
+            , top (pct 50)
+            , translateY (pct -50) |> transform
+            , left (px -50)
+            ]
+        ]
+        [ text "x"
+        ]
+
+
 controlPanel : Model -> Html Msg
 controlPanel model =
+    let
+        toggleDisplay =
+            if model.showControlPanel then
+                translateX (px 0) |> transform
+
+            else
+                translateX (px 160) |> transform
+    in
     div
         [ css
             [ position fixed
-            , bottom (px 16)
+            , top (pct 50)
             , right (px 16)
             , displayFlex
             , flexDirection column
+            , toggleDisplay
+            , Transitions.transition
+                [ Transitions.transform 200
+                ]
             ]
         ]
-        [ button [ onClick SwitchToThemeA ] [ text "Theme A" ]
-        , button [ onClick SwitchToThemeB ] [ text "Theme B" ]
+        [ editPreviewButton model.docView
         , button
             [ type_ "button"
             , onClick ToggleDownloadDocDialog
             ]
             [ text "Download document" ]
-        , editPreviewButton model.docView
+        , button [ onClick SwitchToThemeA ] [ text "Theme A" ]
+        , button [ onClick SwitchToThemeB ] [ text "Theme B" ]
+        , controlPanelToggleButton
         ]
 
 
@@ -288,6 +326,7 @@ init _ =
       , docView = Edit
       , docFilename = "Untitled"
       , showDialog = False
+      , showControlPanel = True
       , appTheme = Theme1
       }
     , Cmd.none
