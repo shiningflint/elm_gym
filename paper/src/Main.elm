@@ -263,8 +263,9 @@ controlPanel model =
             , onClick ToggleDownloadDocDialog
             ]
             [ text "Download document" ]
-        , button [ onClick SwitchToThemeA ] [ text "Theme A" ]
-        , button [ onClick SwitchToThemeB ] [ text "Theme B" ]
+
+        -- , button [ onClick SwitchToThemeA ] [ text "Theme A" ]
+        -- , button [ onClick SwitchToThemeB ] [ text "Theme B" ]
         , controlPanelToggleButton
         ]
 
