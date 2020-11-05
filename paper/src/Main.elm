@@ -1,41 +1,15 @@
 module Main exposing (main)
 
 import Browser
-import Css
-    exposing
-        ( auto
-        , backgroundColor
-        , borderStyle
-        , bottom
-        , calc
-        , column
-        , displayFlex
-        , fixed
-        , flexDirection
-        , fontFamilies
-        , hex
-        , margin4
-        , maxWidth
-        , minHeight
-        , minus
-        , none
-        , padding
-        , pct
-        , position
-        , preLine
-        , px
-        , resize
-        , right
-        , vertical
-        , whiteSpace
-        , width
-        )
-import Css.Global exposing (body, global, typeSelector)
+import Css exposing (..)
+import Css.Global exposing (body, global, selector, typeSelector)
+import Doc exposing (Doc(..))
 import File.Download as Download
 import Html
 import Html.Styled exposing (..)
 import Html.Styled.Attributes exposing (..)
 import Html.Styled.Events exposing (onClick, onInput)
+import Json.Decode as Decode
 import Markdown
 
 
@@ -48,20 +22,17 @@ type DocView
     | Preview
 
 
-type Doc
-    = Doc String
-
-
-encodeDoc : Doc -> String
-encodeDoc doc =
-    case doc of
-        Doc content ->
-            content
+type AppTheme
+    = Theme1
+    | Theme2
 
 
 type alias Model =
     { doc : Doc
     , docView : DocView
+    , docFilename : String
+    , appTheme : AppTheme
+    , showDialog : Bool
     }
 
 
@@ -73,12 +44,17 @@ type Msg
     = UpdateDocContent String
     | ToPreview
     | ToEdit
+    | SwitchToThemeA
+    | SwitchToThemeB
+    | ToggleDownloadDocDialog
     | DownloadDoc
+    | UpdateFileName String
+    | NoOp
 
 
-saveDoc : String -> Cmd Msg
-saveDoc markdown =
-    Download.string "banana-doc.md" "text/markdown" markdown
+saveDoc : String -> String -> Cmd Msg
+saveDoc filename markdown =
+    Download.string (filename ++ ".md") "text/markdown" markdown
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -93,8 +69,27 @@ update msg model =
         ToEdit ->
             ( { model | docView = Edit }, Cmd.none )
 
+        SwitchToThemeA ->
+            ( { model | appTheme = Theme1 }, Cmd.none )
+
+        SwitchToThemeB ->
+            ( { model | appTheme = Theme2 }, Cmd.none )
+
+        ToggleDownloadDocDialog ->
+            let
+                updatedBool =
+                    not model.showDialog
+            in
+            ( { model | showDialog = updatedBool }, Cmd.none )
+
         DownloadDoc ->
-            ( model, encodeDoc model.doc |> saveDoc )
+            ( model, Doc.encode model.doc |> saveDoc model.docFilename )
+
+        UpdateFileName name ->
+            ( { model | docFilename = name }, Cmd.none )
+
+        NoOp ->
+            ( model, Cmd.none )
 
 
 
@@ -123,21 +118,25 @@ docContentStyle =
             16
     in
     css
-        [ resize vertical
+        [ resize none
         , Css.width <|
             calc (pct 100) minus <|
                 px (paddingSpace * 2)
-        , minHeight (px 500)
+        , Css.height <|
+            calc (pct 100) minus <|
+                px (paddingSpace * 2)
         , borderStyle none
         , padding (px paddingSpace)
+        , margin (px 0)
         , fontFamilies baseFontFamilies
         , backgroundColor (hex contentBgColor)
+        , overflowY scroll
         ]
 
 
 styledTextArea model =
     textarea
-        [ value (encodeDoc model.doc)
+        [ value (Doc.encode model.doc)
         , onInput UpdateDocContent
         , docContentStyle
         ]
@@ -148,18 +147,39 @@ styledDocPreview : Doc -> Html Msg
 styledDocPreview doc =
     div [ docContentStyle ] <|
         List.map (\h -> Html.Styled.fromUnstyled h) <|
-            Markdown.toHtml Nothing (encodeDoc doc)
+            Markdown.toHtml Nothing (Doc.encode doc)
 
 
-globalStyleNode : Html Msg
-globalStyleNode =
-    global
-        [ body
-            [ backgroundColor (hex bodyBgColor)
-            , fontFamilies baseFontFamilies
-            ]
-        , typeSelector "pre" [ whiteSpace preLine ]
-        ]
+globalStyleNode : AppTheme -> Html Msg
+globalStyleNode theme =
+    let
+        content =
+            case theme of
+                Theme1 ->
+                    [ body
+                        [ backgroundColor (hex bodyBgColor)
+                        , fontFamilies baseFontFamilies
+                        ]
+                    , selector "body > div"
+                        [ Css.height (vh 100)
+                        , Css.width (vw 100)
+                        ]
+                    , typeSelector "pre" [ whiteSpace preLine ]
+                    ]
+
+                Theme2 ->
+                    [ body
+                        [ backgroundColor (hex "fefefe")
+                        , fontFamilies baseFontFamilies
+                        ]
+                    , selector "body > div"
+                        [ Css.height (vh 100)
+                        , Css.width (vw 100)
+                        ]
+                    , typeSelector "pre" [ whiteSpace preLine ]
+                    ]
+    in
+    global content
 
 
 docViewContent : Model -> Html Msg
@@ -200,35 +220,75 @@ controlPanel model =
             , flexDirection column
             ]
         ]
-        [ button
+        [ button [ onClick SwitchToThemeA ] [ text "Theme A" ]
+        , button [ onClick SwitchToThemeB ] [ text "Theme B" ]
+        , button
             [ type_ "button"
-            , onClick DownloadDoc
+            , onClick ToggleDownloadDocDialog
             ]
             [ text "Download document" ]
         , editPreviewButton model.docView
         ]
 
 
+onClickNoBubble : Msg -> Attribute Msg
+onClickNoBubble message =
+    Html.Styled.Events.custom "click" (Decode.succeed { message = message, stopPropagation = True, preventDefault = True })
+
+
+fileDialog : Model -> Html Msg
+fileDialog model =
+    div
+        [ onClick ToggleDownloadDocDialog
+        , css
+            [ backgroundColor (hex "2b323ab3")
+            , displayFlex
+            , justifyContent center
+            , alignItems center
+            , position fixed
+            , top (px 0)
+            , bottom (px 0)
+            , right (px 0)
+            , left (px 0)
+            ]
+        ]
+        [ div
+            [ onClickNoBubble NoOp
+            , css
+                [ backgroundColor (hex contentBgColor)
+                ]
+            ]
+            [ input [ onInput UpdateFileName, value model.docFilename ] []
+            , br [] []
+            , button [ type_ "button", onClick ToggleDownloadDocDialog ]
+                [ text "x" ]
+            , button [ onClick DownloadDoc ] [ text "Download as markdown" ]
+            ]
+        ]
+
+
 view : Model -> Html.Html Msg
 view model =
     div []
-        [ globalStyleNode
-        , div
-            [ css
-                [ maxWidth (px 600)
-                , margin4 (px 64) auto (px 0) auto
-                ]
-            ]
-            [ docViewContent model ]
+        [ globalStyleNode model.appTheme
+        , docViewContent model
         , controlPanel model
+        , if model.showDialog then
+            fileDialog model
+
+          else
+            Html.Styled.text ""
         ]
         |> Html.Styled.toUnstyled
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { doc = Doc "# Title"
+    ( { doc = Doc.initDoc
       , docView = Edit
+      , docFilename = "Untitled"
+      , showDialog = False
+      , appTheme = Theme1
       }
     , Cmd.none
     )
