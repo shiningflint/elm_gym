@@ -11,5 +11,6 @@ post-app2/index.html
 paper/dist/*
 paper/dev.js
 paper/index.html
+paper/deploy.sh
 
 elm-stuff

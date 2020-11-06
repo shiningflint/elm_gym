@@ -219,18 +219,35 @@ editPreviewButton docView =
                 [ text "Edit" ]
 
 
-controlPanelToggleButton =
-    button
-        [ type_ "button"
-        , onClick ToggleControlPanel
+controlPanelToggleButton : Bool -> Html Msg
+controlPanelToggleButton showControlPanel =
+    let
+        arrowRotation =
+            if showControlPanel then
+                rotate (deg 180) |> transform
+
+            else
+                rotate (deg 0) |> transform
+    in
+    div
+        [ onClick ToggleControlPanel
         , css
             [ position absolute
             , top (pct 50)
             , translateY (pct -50) |> transform
             , left (px -50)
+            , cursor pointer
+            , backgroundColor (hex "fefefe")
+            , padding (px 8)
+            , borderRadius (pct 50)
+            , border3 (px 1) dashed (hex "000000")
             ]
         ]
-        [ text "x"
+        [ img
+            [ src "https://playground.acbw.me/paper/keyboard_arrow_left.svg"
+            , css [ arrowRotation ]
+            ]
+            []
         ]
 
 
@@ -266,7 +283,7 @@ controlPanel model =
 
         -- , button [ onClick SwitchToThemeA ] [ text "Theme A" ]
         -- , button [ onClick SwitchToThemeB ] [ text "Theme B" ]
-        , controlPanelToggleButton
+        , controlPanelToggleButton model.showControlPanel
         ]
 
 
