@@ -1,16 +1,14 @@
 # ignoring distribution folder
 playground/dist/*
-playground/index.html
 
 post-app/dist/*
-post-app/index.html
 
 post-app2/dist/*
-post-app2/index.html
 
 paper/dist/*
 paper/dev.js
-paper/index.html
 paper/deploy.sh
+
+*/index.html
 
 elm-stuff
