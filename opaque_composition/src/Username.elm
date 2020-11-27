@@ -3,10 +3,9 @@ module Username exposing
     , Username
     , blur
     , empty
+    , errorMessage
     , input
-    ,  toString
-       -- , errorMessage
-
+    , toString
     )
 
 import Html exposing (Html)
@@ -40,6 +39,23 @@ toString (Username inputField) =
 blur : Username -> Username
 blur (Username inputField) =
     Username (InputField.blur inputField)
+
+
+errorMessage : Username -> String
+errorMessage (Username inputField) =
+    let
+        errorResult =
+            InputField.errorResult inputField
+    in
+    case errorResult of
+        Ok value ->
+            ""
+
+        Err LengthTooLong ->
+            "Username too long"
+
+        Err LengthTooShort ->
+            "Username too short"
 
 
 

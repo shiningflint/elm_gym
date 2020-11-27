@@ -1,4 +1,4 @@
-module InputField exposing (InputField, blur, init, input, toString)
+module InputField exposing (InputField, blur, errorResult, init, input, toString)
 
 import Html exposing (Html)
 import Html.Attributes exposing (type_, value)
@@ -51,34 +51,23 @@ blur : InputField err -> InputField err
 blur inputField =
     case inputField of
         Partial { value, validator } ->
-            let
-                x =
-                    Debug.log "blur partial input field" validator
-
-                result =
-                    validator value
-            in
-            mapResult inputField result
+            mapResult inputField <| validator value
 
         Valid { value, validator } ->
-            let
-                x =
-                    Debug.log "blur valid input field" validator
-
-                result =
-                    validator value
-            in
-            mapResult inputField result
+            mapResult inputField <| validator value
 
         Invalid { value, validator } _ ->
-            let
-                x =
-                    Debug.log "blur invalid input field" validator
+            mapResult inputField <| validator value
 
-                result =
-                    validator value
-            in
-            mapResult inputField result
+
+errorResult : InputField err -> Result err String
+errorResult inputField =
+    case inputField of
+        Invalid common err ->
+            Err err
+
+        _ ->
+            Ok ""
 
 
 

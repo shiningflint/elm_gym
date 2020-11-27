@@ -70,6 +70,7 @@ view model =
         [ p [] [ text "Username" ]
         , Username.input model.username UsernameInputted UsernameBlurred
         , p [] [ text <| Username.toString model.username ]
+        , p [] [ text <| Username.errorMessage model.username ]
         ]
 
 
