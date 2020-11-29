@@ -50,10 +50,6 @@ update : Msg -> Model -> Model
 update msg model =
     case msg of
         UsernameInputted username ->
-            let
-                _ =
-                    Debug.log "User name inputted"
-            in
             { model | username = username }
 
         UsernameBlurred ->

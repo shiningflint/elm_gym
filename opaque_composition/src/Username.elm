@@ -62,13 +62,13 @@ errorMessage (Username inputField) =
 -- Internals
 
 
-validator : String -> Result Error String
+validator : String -> Result ( String, Error ) String
 validator value =
     if String.length value > 20 then
-        Err LengthTooLong
+        Err ( value, LengthTooLong )
 
     else if String.length value < 5 then
-        Err LengthTooShort
+        Err ( value, LengthTooShort )
 
     else
         Ok value

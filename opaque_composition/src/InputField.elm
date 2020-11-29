@@ -13,11 +13,11 @@ type InputField err
 
 type alias Common err =
     { value : String
-    , validator : String -> Result err String
+    , validator : String -> Result ( String, err ) String
     }
 
 
-init : String -> (String -> Result err String) -> InputField err
+init : String -> (String -> Result ( String, err ) String) -> InputField err
 init initValue validator =
     Partial { value = initValue, validator = validator }
 
@@ -27,16 +27,12 @@ input inputField onInputMsg onBlurMsg =
     let
         onInputHandler =
             \value ->
+                let
+                    validator =
+                        inputFieldValidator inputField
+                in
                 onInputMsg <|
-                    case inputField of
-                        Partial common ->
-                            Partial { value = value, validator = common.validator }
-
-                        Valid common ->
-                            Valid { value = value, validator = common.validator }
-
-                        Invalid common err ->
-                            Invalid { value = value, validator = common.validator } err
+                    Partial { value = value, validator = validator }
     in
     Html.input
         [ type_ "text"
@@ -49,15 +45,14 @@ input inputField onInputMsg onBlurMsg =
 
 blur : InputField err -> InputField err
 blur inputField =
-    case inputField of
-        Partial { value, validator } ->
-            mapResult inputField <| validator value
+    let
+        validator =
+            inputFieldValidator inputField
 
-        Valid { value, validator } ->
-            mapResult inputField <| validator value
-
-        Invalid { value, validator } _ ->
-            mapResult inputField <| validator value
+        value =
+            inputFieldValue inputField
+    in
+    mapResult inputField <| validator value
 
 
 errorResult : InputField err -> Result err String
@@ -74,7 +69,7 @@ errorResult inputField =
 -- Internals
 
 
-inputFieldValidator : InputField err -> (String -> Result err String)
+inputFieldValidator : InputField err -> (String -> Result ( String, err ) String)
 inputFieldValidator inputField =
     case inputField of
         Partial { validator } ->
@@ -87,16 +82,29 @@ inputFieldValidator inputField =
             validator
 
 
-mapResult : InputField err -> Result err String -> InputField err
+inputFieldValue : InputField err -> String
+inputFieldValue inputField =
+    case inputField of
+        Partial { value } ->
+            value
+
+        Valid { value } ->
+            value
+
+        Invalid { value } _ ->
+            value
+
+
+mapResult : InputField err -> Result ( String, err ) String -> InputField err
 mapResult inputField result =
     case result of
         Ok value ->
             Valid
                 { value = value, validator = inputFieldValidator inputField }
 
-        Err err ->
+        Err ( value, err ) ->
             Invalid
-                { value = "", validator = inputFieldValidator inputField }
+                { value = value, validator = inputFieldValidator inputField }
                 err
 
 
