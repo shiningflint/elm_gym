@@ -2,6 +2,7 @@ module Email exposing (Email, blur, empty, errorMessage, input, toString)
 
 import Html exposing (Html)
 import InputField
+import Regex
 
 
 type Email
