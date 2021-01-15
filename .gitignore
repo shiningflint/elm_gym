@@ -1,11 +1,7 @@
 # ignoring distribution folder
-playground/dist/*
 
-post-app/dist/*
+*/dist/*
 
-post-app2/dist/*
-
-paper/dist/*
 paper/dev.js
 paper/deploy.sh
 

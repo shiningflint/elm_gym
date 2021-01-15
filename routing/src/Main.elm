@@ -1,7 +1,9 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Navigation as Nav
 import Html exposing (..)
+import Route
 import Url
 
 
@@ -10,12 +12,22 @@ import Url
 
 
 type alias Model =
-    Int
+    { route : Route.Route
+    }
 
 
-init : () -> url -> key -> ( Model, Cmd Msg )
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url key =
-    ( 0, Cmd.none )
+    let
+        initRoute =
+            Route.parseUrl url
+
+        _ =
+            Debug.log "url" url
+    in
+    ( { route = initRoute }
+    , Cmd.none
+    )
 
 
 
@@ -51,9 +63,28 @@ subscriptions model =
 -- VIEW
 
 
+routeContent : Route.Route -> Html Msg
+routeContent route =
+    case route of
+        Route.NotFound ->
+            div [] [ text "404 Not Found" ]
+
+        Route.Top ->
+            div [] [ text "This is the top page" ]
+
+        Route.Home ->
+            div [] [ text "Welcome home!" ]
+
+        Route.HomeCourses ->
+            div [] [ text "Home Courses" ]
+
+        Route.Courses name ->
+            div [] [ text <| "Course detail " ++ name ]
+
+
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Main title", body = [ div [] [ text "Hello babanas" ] ] }
+    { title = "Main title", body = [ routeContent model.route ] }
 
 
 main =

@@ -1,1 +1,1 @@
-elm-live src/Main.elm -p 8088
+elm-live src/Main.elm --no-server -- --output=dev.js
