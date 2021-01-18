@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Events exposing (onClick)
+import Http
 
 
 
@@ -41,17 +42,32 @@ init flags =
 
 type Msg
     = GetUsers
+    | GotUsers (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GetUsers ->
+            ( model, getUsers )
+
+        GotUsers (Ok users) ->
             let
                 _ =
-                    Debug.log "Getting users" ""
+                    Debug.log "users" users
             in
             ( model, Cmd.none )
+
+        GotUsers (Err error) ->
+            ( model, Cmd.none )
+
+
+getUsers : Cmd Msg
+getUsers =
+    Http.get
+        { url = "http://localhost:3000/users"
+        , expect = Http.expectString GotUsers
+        }
 
 
 
