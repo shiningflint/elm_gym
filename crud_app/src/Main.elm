@@ -2,7 +2,8 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (..)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (type_, value)
+import Html.Events exposing (onClick, onInput)
 import Http
 import User exposing (User)
 
@@ -15,6 +16,7 @@ type alias Model =
     { title : Title
     , users : Status (List User)
     , user : Status User
+    , userForm : User.Form
     }
 
 
@@ -25,13 +27,15 @@ type alias Title =
 type Status a
     = Loading
     | Loaded a
+    | Waiting
 
 
 init : () -> ( Model, Cmd Msg )
 init flags =
     ( { title = "User List"
-      , user = Loading
-      , users = Loading
+      , user = Waiting
+      , users = Waiting
+      , userForm = User.emptyForm
       }
     , Cmd.none
     )
@@ -46,11 +50,27 @@ type Msg
     | GetUsers
     | GotUser (Result Http.Error User)
     | GotUsers (Result Http.Error (List User))
+    | EnteredId String
+    | EnteredEmail String
+    | ClickedSave
+    | ClickedDelete User
+    | PostedUser (Result Http.Error String)
+    | DeletedUser (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        ClickedSave ->
+            let
+                _ =
+                    Debug.log "Saving user form" model.userForm
+            in
+            ( model, postUser <| User.formToUser model.userForm )
+
+        ClickedDelete u ->
+            ( model, deleteUser u )
+
         GetUser u ->
             ( { model | user = Loading }, getUser u )
 
@@ -69,6 +89,35 @@ update msg model =
         GotUsers (Err error) ->
             ( model, Cmd.none )
 
+        EnteredId id ->
+            let
+                idInt =
+                    String.toInt id
+                        |> Maybe.withDefault 0
+            in
+            ( { model | userForm = User.updateForm model.userForm (\form -> { form | id = idInt }) }
+            , Cmd.none
+            )
+
+        EnteredEmail email ->
+            ( { model | userForm = User.updateForm model.userForm (\form -> { form | email = email }) }
+            , Cmd.none
+            )
+
+        PostedUser reply ->
+            let
+                _ =
+                    Debug.log "posted user reply" reply
+            in
+            ( { model | userForm = User.emptyForm }, getUsers )
+
+        DeletedUser reply ->
+            let
+                _ =
+                    Debug.log "deleted user reply" reply
+            in
+            ( { model | user = Waiting }, getUsers )
+
 
 getUsers : Cmd Msg
 getUsers =
@@ -86,6 +135,28 @@ getUser user =
         }
 
 
+postUser : User -> Cmd Msg
+postUser user =
+    Http.post
+        { url = "http://localhost:3000/users/"
+        , body = Http.stringBody "application/json" <| User.json user
+        , expect = Http.expectString PostedUser
+        }
+
+
+deleteUser : User -> Cmd Msg
+deleteUser user =
+    Http.request
+        { method = "DELETE"
+        , url = "http://localhost:3000/users/" ++ User.idString user
+        , expect = Http.expectString DeletedUser
+        , timeout = Nothing
+        , tracker = Nothing
+        , body = Http.emptyBody
+        , headers = []
+        }
+
+
 
 -- VIEW
 
@@ -94,7 +165,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ headerView model.title
-        , bodyView model.users
+        , bodyView model.users model.userForm
         , userDetail model.user
         ]
 
@@ -106,11 +177,14 @@ headerView title =
         ]
 
 
-bodyView : Status (List User) -> Html Msg
-bodyView users =
+bodyView : Status (List User) -> User.Form -> Html Msg
+bodyView users userForm =
     let
         usersSection =
             case users of
+                Waiting ->
+                    p [] []
+
                 Loading ->
                     p [] [ text "Loading..." ]
 
@@ -118,8 +192,27 @@ bodyView users =
                     userTable us
     in
     div []
-        [ usersSection
+        [ newUser userForm
+        , usersSection
         , button [ onClick GetUsers ] [ text "Load users" ]
+        ]
+
+
+newUser : User.Form -> Html Msg
+newUser userForm =
+    let
+        userId =
+            userForm.id |> String.fromInt
+
+        userEmail =
+            userForm.email
+    in
+    div []
+        [ form []
+            [ input [ onInput EnteredId, value userId ] []
+            , input [ onInput EnteredEmail, value userEmail ] []
+            , button [ onClick ClickedSave, type_ "button" ] [ text "Register user" ]
+            ]
         ]
 
 
@@ -152,14 +245,20 @@ userDetail user =
     let
         userSection =
             case user of
+                Waiting ->
+                    p [] []
+
                 Loading ->
                     p [] [ text "Loading..." ]
 
                 Loaded us ->
-                    p []
-                        [ span [] [ text <| User.idString us ]
-                        , br [] []
-                        , span [] [ text <| User.email us ]
+                    div []
+                        [ p []
+                            [ span [] [ text <| User.idString us ]
+                            , br [] []
+                            , span [] [ text <| User.email us ]
+                            ]
+                        , button [ onClick (ClickedDelete us) ] [ text "Delete user" ]
                         ]
     in
     div [] [ userSection ]
