@@ -1,15 +1,18 @@
 module User exposing
     ( Form
     , User
+    , UserForm(..)
     , decoder
     , email
     , emptyForm
     , formToUser
+    , getForm
     , id
     , idString
     , json
     , listDecoder
     , updateForm
+    , userToForm
     )
 
 import Json.Decode as Decode exposing (Decoder)
@@ -28,6 +31,12 @@ type alias Internals =
     { id : Int
     , email : String
     }
+
+
+type UserForm
+    = Idle
+    | New Form
+    | Edit Form
 
 
 type alias Form =
@@ -100,6 +109,19 @@ listDecoder =
 -- FORM
 
 
+getForm : UserForm -> Form
+getForm userForm =
+    case userForm of
+        Idle ->
+            emptyForm
+
+        New f ->
+            f
+
+        Edit f ->
+            f
+
+
 emptyForm : Form
 emptyForm =
     { id = 0, email = "" }
@@ -113,3 +135,8 @@ updateForm form transform =
 formToUser : Form -> User
 formToUser userForm =
     User userForm
+
+
+userToForm : User -> Form
+userToForm u =
+    { id = id u, email = email u }

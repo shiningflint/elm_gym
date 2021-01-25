@@ -16,7 +16,7 @@ type alias Model =
     { title : Title
     , users : Status (List User)
     , user : Status User
-    , userForm : User.Form
+    , userForm : User.UserForm
     }
 
 
@@ -35,7 +35,7 @@ init flags =
     ( { title = "User List"
       , user = Waiting
       , users = Waiting
-      , userForm = User.emptyForm
+      , userForm = User.Idle
       }
     , Cmd.none
     )
@@ -53,8 +53,12 @@ type Msg
     | EnteredId String
     | EnteredEmail String
     | ClickedSave
+    | ClickedEditSave
     | ClickedDelete User
+    | ClickedNewUser
+    | ClickedEdit User
     | PostedUser (Result Http.Error String)
+    | PuttedUser (Result Http.Error String)
     | DeletedUser (Result Http.Error String)
 
 
@@ -62,14 +66,21 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         ClickedSave ->
-            let
-                _ =
-                    Debug.log "Saving user form" model.userForm
-            in
-            ( model, postUser <| User.formToUser model.userForm )
+            ( model, postUser <| User.formToUser <| User.getForm model.userForm )
+
+        ClickedEditSave ->
+            ( model, putUser <| User.formToUser <| User.getForm model.userForm )
 
         ClickedDelete u ->
             ( model, deleteUser u )
+
+        ClickedNewUser ->
+            ( { model | userForm = User.New User.emptyForm }, Cmd.none )
+
+        ClickedEdit u ->
+            ( { model | userForm = User.userToForm u |> User.Edit }
+            , Cmd.none
+            )
 
         GetUser u ->
             ( { model | user = Loading }, getUser u )
@@ -94,13 +105,40 @@ update msg model =
                 idInt =
                     String.toInt id
                         |> Maybe.withDefault 0
+
+                usrForm =
+                    case model.userForm of
+                        User.New f ->
+                            User.updateForm f (\form -> { form | id = idInt })
+                                |> User.New
+
+                        User.Edit f ->
+                            User.updateForm f (\form -> { form | id = idInt })
+                                |> User.Edit
+
+                        User.Idle ->
+                            User.Idle
             in
-            ( { model | userForm = User.updateForm model.userForm (\form -> { form | id = idInt }) }
+            ( { model | userForm = usrForm }
             , Cmd.none
             )
 
         EnteredEmail email ->
-            ( { model | userForm = User.updateForm model.userForm (\form -> { form | email = email }) }
+            let
+                usrForm =
+                    case model.userForm of
+                        User.New f ->
+                            User.updateForm f (\form -> { form | email = email })
+                                |> User.New
+
+                        User.Edit f ->
+                            User.updateForm f (\form -> { form | email = email })
+                                |> User.Edit
+
+                        User.Idle ->
+                            User.Idle
+            in
+            ( { model | userForm = usrForm }
             , Cmd.none
             )
 
@@ -109,7 +147,14 @@ update msg model =
                 _ =
                     Debug.log "posted user reply" reply
             in
-            ( { model | userForm = User.emptyForm }, getUsers )
+            ( { model | userForm = User.Idle }, getUsers )
+
+        PuttedUser reply ->
+            let
+                _ =
+                    Debug.log "deleted user reply" reply
+            in
+            ( { model | userForm = User.Idle }, getUsers )
 
         DeletedUser reply ->
             let
@@ -141,6 +186,19 @@ postUser user =
         { url = "http://localhost:3000/users/"
         , body = Http.stringBody "application/json" <| User.json user
         , expect = Http.expectString PostedUser
+        }
+
+
+putUser : User -> Cmd Msg
+putUser user =
+    Http.request
+        { method = "PUT"
+        , url = "http://localhost:3000/users/" ++ User.idString user
+        , expect = Http.expectString PuttedUser
+        , timeout = Nothing
+        , tracker = Nothing
+        , body = Http.stringBody "application/json" <| User.json user
+        , headers = []
         }
 
 
@@ -177,7 +235,7 @@ headerView title =
         ]
 
 
-bodyView : Status (List User) -> User.Form -> Html Msg
+bodyView : Status (List User) -> User.UserForm -> Html Msg
 bodyView users userForm =
     let
         usersSection =
@@ -190,28 +248,50 @@ bodyView users userForm =
 
                 Loaded us ->
                     userTable us
+
+        userFormView =
+            case userForm of
+                User.Idle ->
+                    button [ onClick ClickedNewUser ] [ text "Create new user" ]
+
+                _ ->
+                    userDetailForm userForm
     in
     div []
-        [ newUser userForm
+        [ userFormView
         , usersSection
         , button [ onClick GetUsers ] [ text "Load users" ]
         ]
 
 
-newUser : User.Form -> Html Msg
-newUser userForm =
+userDetailForm : User.UserForm -> Html Msg
+userDetailForm userForm =
     let
+        uForm =
+            User.getForm userForm
+
         userId =
-            userForm.id |> String.fromInt
+            uForm.id |> String.fromInt
 
         userEmail =
-            userForm.email
+            uForm.email
+
+        submitButton =
+            case userForm of
+                User.New f ->
+                    button [ onClick ClickedSave, type_ "button" ] [ text "Register user" ]
+
+                User.Edit f ->
+                    button [ onClick ClickedEditSave, type_ "button" ] [ text "Save existing user" ]
+
+                User.Idle ->
+                    span [] [ text "Should not happen" ]
     in
     div []
         [ form []
             [ input [ onInput EnteredId, value userId ] []
             , input [ onInput EnteredEmail, value userEmail ] []
-            , button [ onClick ClickedSave, type_ "button" ] [ text "Register user" ]
+            , submitButton
             ]
         ]
 
@@ -258,6 +338,7 @@ userDetail user =
                             , br [] []
                             , span [] [ text <| User.email us ]
                             ]
+                        , button [ onClick (ClickedEdit us) ] [ text "Edit user" ]
                         , button [ onClick (ClickedDelete us) ] [ text "Delete user" ]
                         ]
     in
