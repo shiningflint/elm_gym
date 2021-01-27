@@ -41,8 +41,29 @@ update msg model =
         ClickedNavigation page ->
             { model | page = page }
 
-        _ ->
-            model
+        BananaMsg subMsg ->
+            let
+                updatedBananaModel =
+                    case model.page of
+                        BananaPage subModel ->
+                            BananaPage <| Banana.update subMsg subModel
+
+                        _ ->
+                            model.page
+            in
+            { model | page = updatedBananaModel }
+
+        PotatoMsg subMsg ->
+            let
+                updatedPotatoModel =
+                    case model.page of
+                        PotatoPage subModel ->
+                            PotatoPage <| Potato.update subMsg subModel
+
+                        _ ->
+                            model.page
+            in
+            { model | page = updatedPotatoModel }
 
 
 
