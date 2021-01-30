@@ -4,6 +4,7 @@ import Browser
 import Html exposing (..)
 import Html.Attributes exposing (class, type_, value)
 import Html.Events exposing (onInput)
+import Table
 import Task
 import Time
 
@@ -26,6 +27,7 @@ type alias Model =
     { reservations : List Reservation
     , filterKeyword : String
     , timezone : Time.Zone
+    , tableState : Table.State
     }
 
 
@@ -34,6 +36,7 @@ init _ =
     ( { reservations = trainTickets
       , filterKeyword = ""
       , timezone = Time.utc
+      , tableState = Table.initialSort "Name"
       }
     , getCurrentTimezone
     )
@@ -46,6 +49,7 @@ init _ =
 type Msg
     = CurrentTimezone Time.Zone
     | EnteredFilterKeyword String
+    | SetTableState Table.State
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -61,6 +65,9 @@ update msg model =
         EnteredFilterKeyword keyword ->
             ( { model | filterKeyword = keyword }, Cmd.none )
 
+        SetTableState newState ->
+            ( { model | tableState = newState }, Cmd.none )
+
 
 
 -- VIEW
@@ -70,7 +77,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ reservationsFilter model.filterKeyword
-        , reservationsTable model.reservations model.timezone
+        , Table.view (config model.timezone) model.tableState model.reservations
         ]
 
 
@@ -87,34 +94,28 @@ reservationsFilter filterKeyword =
         ]
 
 
-reservationsTable : List Reservation -> Time.Zone -> Html msg
-reservationsTable res timezone =
-    let
-        reservationRows =
-            List.map
-                (\r ->
-                    tr []
-                        [ td [] [ text r.name ]
-                        , td [] [ text r.stationFrom ]
-                        , td [] [ text r.stationTo ]
-                        , td [] [ text <| localHumanFormat timezone r.departAt ]
-                        , td [] [ text <| localHumanFormat timezone r.arriveAt ]
-                        ]
-                )
-                res
-    in
-    table []
-        [ thead []
-            [ tr []
-                [ td [] [ text "Name" ]
-                , td [] [ text "Depart from" ]
-                , td [] [ text "Arrive at" ]
-                , td [] [ text "Departure time" ]
-                , td [] [ text "Arrival time" ]
-                ]
+config : Time.Zone -> Table.Config Reservation Msg
+config timezone =
+    Table.config
+        { toId = .name
+        , toMsg = SetTableState
+        , columns =
+            [ Table.stringColumn "Name" .name
+            , Table.stringColumn "Depart from" .stationFrom
+            , Table.stringColumn "Arrive at" .stationTo
+            , reservationTimeColumn timezone "Departure Time" .departAt
+            , reservationTimeColumn timezone "Arrival Time" .arriveAt
             ]
-        , tbody [] reservationRows
-        ]
+        }
+
+
+reservationTimeColumn : Time.Zone -> String -> (Reservation -> Time.Posix) -> Table.Column Reservation Msg
+reservationTimeColumn timezone name attrName =
+    Table.customColumn
+        { name = name
+        , viewData = localHumanFormat timezone << attrName
+        , sorter = Table.unsortable
+        }
 
 
 
