@@ -19,7 +19,9 @@ main =
 
 init : flags -> ( Model, Cmd Msg )
 init _ =
-    ( { selectables = ( valueIds, selectedValueIds ) }
+    ( { selectables = ( drawItems, selectedValueIds )
+      , drawIds = drawIds
+      }
     , Cmd.none
     )
 
@@ -29,7 +31,9 @@ init _ =
 
 
 type alias Model =
-    { selectables : ( List ValueId, Set ValueId ) }
+    { selectables : ( List DrawItem, Set ValueId )
+    , drawIds : List DrawId
+    }
 
 
 
@@ -57,9 +61,6 @@ update msg model =
 
                     else
                         Set.insert valueId sSelectedIds
-
-                _ =
-                    Debug.log "toggle value id" valueId
             in
             ( { model | selectables = ( sValueIds, newSselectedIds ) }, Cmd.none )
 
@@ -71,52 +72,96 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ drawing model.selectables
+        [ drawing model.selectables model.drawIds
         ]
 
 
-drawing : ( List ValueId, Set ValueId ) -> Html Msg
-drawing selectables =
+drawing : ( List DrawItem, Set ValueId ) -> List DrawId -> Html Msg
+drawing selectables drawings =
     let
-        sValueIds =
+        sDrawItems =
             Tuple.first selectables
 
         sSelectedIds =
             Tuple.second selectables
 
-        valueItem =
-            \valueId ->
+        drawItem =
+            \drawId ->
                 let
-                    selectedClass =
-                        if Set.member valueId sSelectedIds then
-                            class "selected"
+                    filteredDrawRecord =
+                        List.filter (\i -> i.drawId == drawId) sDrawItems
 
-                        else
-                            class ""
+                    htmlItem =
+                        case List.head filteredDrawRecord of
+                            Nothing ->
+                                div
+                                    [ class "item"
+                                    , class "disabled"
+                                    ]
+                                    [ span [] [ text "N/A" ] ]
+
+                            Just d ->
+                                let
+                                    selectedClass =
+                                        if Set.member d.valueId sSelectedIds then
+                                            class "selected"
+
+                                        else
+                                            class ""
+                                in
+                                div
+                                    [ class "item"
+                                    , selectedClass
+                                    , onClick <| ToggleSelect d.valueId
+                                    ]
+                                    [ span [] [ text d.valueId ] ]
                 in
-                div
-                    [ class "item"
-                    , selectedClass
-                    , onClick <| ToggleSelect valueId
-                    ]
-                    [ span [] [ text valueId ] ]
+                htmlItem
     in
-    div [ class "item-wrap" ] <| List.map valueItem sValueIds
+    div [ class "item-wrap" ] <| List.map drawItem drawings
 
 
 
--- VALUEID
+-- DrawItem
+
+
+type alias DrawItem =
+    { drawId : DrawId
+    , valueId : ValueId
+    }
+
+
+type alias DrawId =
+    String
 
 
 type alias ValueId =
     String
 
 
-valueIds : List ValueId
-valueIds =
-    [ "1A", "1B", "2A", "2B" ]
+drawItems : List DrawItem
+drawItems =
+    [ { drawId = "seat01", valueId = "1A" }
+    , { drawId = "seat02", valueId = "1B" }
+    , { drawId = "seat03", valueId = "2A" }
+
+    -- , { drawId = "seat04", valueId = "2B" }
+    , { drawId = "seat05", valueId = "3A" }
+    , { drawId = "seat06", valueId = "3B" }
+    ]
 
 
 selectedValueIds : Set ValueId
 selectedValueIds =
-    Set.fromList [ "2A", "1B" ]
+    Set.fromList [ "2A", "3B" ]
+
+
+drawIds : List DrawId
+drawIds =
+    [ "seat01"
+    , "seat02"
+    , "seat03"
+    , "seat04"
+    , "seat05"
+    , "seat06"
+    ]
