@@ -74,8 +74,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        -- [ drawing model.selectables model.drawIds
-        [ DrawSvg.draw generateSvgString model.drawIds
+        [ DrawSvg.draw generateSvgString model.drawIds model.selectables
         ]
 
 
@@ -130,4 +129,4 @@ drawing selectables drawings =
 
 generateSvgString : String
 generateSvgString =
-    """<svg width="181px" height="181px" viewbox="-0.5 -0.5 181 181"><g><rect id="seat01" x="0" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect x="0" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat03" x="100" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat08" x="100" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /></g></svg>"""
+    """<svg width="181px" height="181px" viewbox="-0.5 -0.5 181 181"><g><rect id="seat01" x="0" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat02" x="0" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat03" x="100" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat04" x="100" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /></g></svg>"""

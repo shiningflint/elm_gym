@@ -3,23 +3,67 @@ module DrawSvg exposing (draw)
 import DrawItem
 import Html exposing (Html)
 import List.Extra
+import Set exposing (Set)
 import Svg exposing (Svg)
 import SvgParser exposing (Element, SvgAttribute, SvgNode(..))
 
 
-draw : String -> List DrawItem.DrawId -> Html msg
-draw svgString drawIds =
-    stringToSvg svgString
+
+-- MAIN API
 
 
-stringToSvg : String -> Svg msg
-stringToSvg svgString =
+draw :
+    String
+    -> List DrawItem.DrawId
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> Html msg
+draw svgString drawIds selectables =
+    stringToSvg svgString selectables
+
+
+stringToSvg :
+    String
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> Svg msg
+stringToSvg svgString selectables =
     case SvgParser.parseToNode svgString of
         Ok sn ->
-            nodeToClickableSvg sn
+            nodeToClickableSvg sn selectables
 
         Err e ->
             Svg.text <| "error: " ++ e
+
+
+
+-- SEAT
+
+
+type SeatState
+    = Taken
+    | Untaken
+
+
+getSeatState :
+    DrawItem.DrawId
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> SeatState
+getSeatState drawIdValue selectables =
+    case DrawItem.isThisSeatTaken drawIdValue selectables of
+        True ->
+            Taken
+
+        False ->
+            Untaken
+
+
+getSeatColor : SeatState -> String
+getSeatColor seatState =
+    case seatState of
+        Taken ->
+            "#BD2F2F"
+
+        Untaken ->
+            "#8DC5A4"
 
 
 
@@ -36,52 +80,72 @@ hasFill ( name, value ) =
     name == "fill"
 
 
-setFillColor : SvgAttribute -> SvgAttribute
-setFillColor ( name, value ) =
+setFillColor : SvgAttribute -> String -> SvgAttribute
+setFillColor ( name, value ) seatColor =
     if name == "fill" then
-        ( name, "#FF0000" )
+        ( name, seatColor )
 
     else
         ( name, value )
 
 
-wireFillColor : List SvgAttribute -> DrawItem.DrawId -> List SvgAttribute
-wireFillColor elAttrs drawIdValue =
-    -- find fill color
-    -- if found, set fill value to red
-    -- if not found, append fill color with red
+wireFillColor :
+    List SvgAttribute
+    -> DrawItem.DrawId
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> List SvgAttribute
+wireFillColor elAttrs drawIdValue selectables =
+    let
+        seatColor =
+            getSeatState drawIdValue selectables
+                |> getSeatColor
+    in
     case List.Extra.find hasFill elAttrs of
         Nothing ->
-            elAttrs ++ [ ( "fill", "#FF0000" ) ]
+            elAttrs ++ [ ( "fill", seatColor ) ]
 
         Just el ->
-            List.map setFillColor elAttrs
+            List.map
+                (\( name, value ) -> setFillColor ( name, value ) seatColor)
+                elAttrs
 
 
-seatedAttributes : List SvgAttribute -> List SvgAttribute
-seatedAttributes elAttrs =
+seatedAttributes :
+    List SvgAttribute
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> List SvgAttribute
+seatedAttributes elAttrs selectables =
     case List.Extra.find hasDrawIdValue elAttrs of
         Nothing ->
             elAttrs
 
         Just el ->
-            -- if seated element is found
-            -- change the fill attribute color to red
-            wireFillColor elAttrs (Tuple.second el)
+            wireFillColor elAttrs (Tuple.second el) selectables
 
 
-elementToClickableSvg : Element -> Svg msg
-elementToClickableSvg element =
+elementToClickableSvg :
+    Element
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> Svg msg
+elementToClickableSvg element selectables =
     Svg.node element.name
-        (List.map SvgParser.toAttribute <| seatedAttributes element.attributes)
-        (List.map nodeToClickableSvg element.children)
+        (List.map SvgParser.toAttribute <|
+            seatedAttributes element.attributes selectables
+        )
+        (List.map
+            (\svgNode -> nodeToClickableSvg svgNode selectables)
+            element.children
+        )
 
 
-nodeToClickableSvg : SvgNode -> Svg msg
-nodeToClickableSvg svgNode =
+nodeToClickableSvg :
+    SvgNode
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> Svg msg
+nodeToClickableSvg svgNode selectables =
     case svgNode of
         SvgElement element ->
-            elementToClickableSvg element
+            elementToClickableSvg element selectables
 
         SvgText content ->
             Svg.text content
