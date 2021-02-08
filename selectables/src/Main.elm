@@ -74,7 +74,7 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ DrawSvg.draw generateSvgString model.drawIds model.selectables
+        [ DrawSvg.draw generateSvgString model.drawIds model.selectables ToggleSelect
         ]
 
 

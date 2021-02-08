@@ -4,6 +4,7 @@ module DrawItem exposing
     , ValueId
     , drawIds
     , drawItems
+    , getValueId
     , isThisSeatTaken
     , selectedValueIds
     )
@@ -28,12 +29,17 @@ type alias ValueId =
 
 isThisSeatTaken : DrawId -> ( List DrawItem, Set ValueId ) -> Bool
 isThisSeatTaken drawIdValue selectables =
-    case List.Extra.find (\di -> drawIdValue == di.drawId) (Tuple.first selectables) of
+    case getValueId drawIdValue (Tuple.first selectables) of
         Nothing ->
             False
 
         Just di ->
             Set.member di.valueId (Tuple.second selectables)
+
+
+getValueId : DrawId -> List DrawItem -> Maybe DrawItem
+getValueId drawIdValue drawItemValues =
+    List.Extra.find (\di -> drawIdValue == di.drawId) drawItemValues
 
 
 drawItems : List DrawItem
