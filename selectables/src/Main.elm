@@ -6,10 +6,11 @@ import DrawSvg
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
+import Http
 import Set exposing (Set)
 
 
-main : Program () Model Msg
+main : Program Config Model Msg
 main =
     Browser.element
         { init = init
@@ -19,12 +20,13 @@ main =
         }
 
 
-init : flags -> ( Model, Cmd Msg )
-init _ =
+init : Config -> ( Model, Cmd Msg )
+init config =
     ( { selectables = ( DrawItem.drawItems, DrawItem.selectedValueIds )
       , drawIds = DrawItem.drawIds
+      , svgString = Nothing
       }
-    , Cmd.none
+    , getSvgString config.svgSrc
     )
 
 
@@ -35,7 +37,12 @@ init _ =
 type alias Model =
     { selectables : ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     , drawIds : List DrawItem.DrawId
+    , svgString : Maybe String
     }
+
+
+type alias Config =
+    { svgSrc : String }
 
 
 
@@ -44,6 +51,7 @@ type alias Model =
 
 type Msg
     = ToggleSelect DrawItem.ValueId
+    | GotSvgString (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -66,6 +74,20 @@ update msg model =
             in
             ( { model | selectables = ( sValueIds, newSselectedIds ) }, Cmd.none )
 
+        GotSvgString (Ok svgString) ->
+            ( { model | svgString = Just svgString }, Cmd.none )
+
+        GotSvgString (Err error) ->
+            ( { model | svgString = Nothing }, Cmd.none )
+
+
+getSvgString : String -> Cmd Msg
+getSvgString url =
+    Http.get
+        { url = url
+        , expect = Http.expectString GotSvgString
+        }
+
 
 
 -- VIEW
@@ -73,9 +95,16 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ DrawSvg.draw generateSvgString model.drawIds model.selectables ToggleSelect
-        ]
+    let
+        svgContent =
+            case model.svgString of
+                Nothing ->
+                    []
+
+                Just svgString ->
+                    [ DrawSvg.draw svgString model.drawIds model.selectables ToggleSelect ]
+    in
+    div [] svgContent
 
 
 drawing : ( List DrawItem.DrawItem, Set DrawItem.ValueId ) -> List DrawItem.DrawId -> Html Msg
@@ -121,12 +150,3 @@ drawing selectables drawings =
                 htmlItem
     in
     div [ class "item-wrap" ] <| List.map drawItem drawings
-
-
-
--- SVG INPUT
-
-
-generateSvgString : String
-generateSvgString =
-    """<svg width="181px" height="181px" viewbox="-0.5 -0.5 181 181"><g><rect id="seat01" x="0" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat02" x="0" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat03" x="100" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat04" x="100" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /></g></svg>"""

@@ -9,3 +9,13 @@ API config:
 Model =
 { selectables : (List String, Set String)
 }
+
+Feature roadmap:
+- Error handling for http error
+- Error handling for Svg parse failure
+- Disabled seat Set
+- Seat selection limit
+- Config colors:
+-- Disabled color
+-- Open color
+-- Selected color

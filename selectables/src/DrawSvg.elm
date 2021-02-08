@@ -88,11 +88,11 @@ setFillColor ( name, value ) seatColor =
 
 
 wireFillColor :
-    List SvgAttribute
-    -> DrawItem.DrawId
+    DrawItem.DrawId
     -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     -> List SvgAttribute
-wireFillColor elAttrs drawIdValue selectables =
+    -> List SvgAttribute
+wireFillColor drawIdValue selectables elAttrs =
     let
         seatColor =
             getSeatState drawIdValue selectables
@@ -118,16 +118,17 @@ hasDrawIdValue ( name, value ) =
 
 
 seatedAttributes :
-    List SvgAttribute
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     -> List SvgAttribute
-seatedAttributes elAttrs selectables =
+    -> List SvgAttribute
+seatedAttributes selectables elAttrs =
     case List.Extra.find hasDrawIdValue elAttrs of
         Nothing ->
             elAttrs
 
         Just el ->
-            wireFillColor elAttrs (Tuple.second el) selectables
+            List.filter (\( n, v ) -> n /= "style") elAttrs
+                |> wireFillColor (Tuple.second el) selectables
 
 
 clickableAttribute :
@@ -156,8 +157,8 @@ elementToClickableSvg :
     -> Svg msg
 elementToClickableSvg element selectables toMsg =
     Svg.node element.name
-        ((List.map SvgParser.toAttribute <|
-            seatedAttributes element.attributes selectables
+        ((seatedAttributes selectables element.attributes
+            |> List.map SvgParser.toAttribute
          )
             ++ clickableAttribute element.attributes selectables toMsg
         )
