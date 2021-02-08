@@ -1,6 +1,8 @@
 module Main exposing (main)
 
 import Browser
+import DrawItem
+import DrawSvg
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
@@ -19,8 +21,8 @@ main =
 
 init : flags -> ( Model, Cmd Msg )
 init _ =
-    ( { selectables = ( drawItems, selectedValueIds )
-      , drawIds = drawIds
+    ( { selectables = ( DrawItem.drawItems, DrawItem.selectedValueIds )
+      , drawIds = DrawItem.drawIds
       }
     , Cmd.none
     )
@@ -31,8 +33,8 @@ init _ =
 
 
 type alias Model =
-    { selectables : ( List DrawItem, Set ValueId )
-    , drawIds : List DrawId
+    { selectables : ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    , drawIds : List DrawItem.DrawId
     }
 
 
@@ -41,7 +43,7 @@ type alias Model =
 
 
 type Msg
-    = ToggleSelect ValueId
+    = ToggleSelect DrawItem.ValueId
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -72,11 +74,11 @@ update msg model =
 view : Model -> Html Msg
 view model =
     div []
-        [ drawing model.selectables model.drawIds
+        [ DrawSvg.draw generateSvgString model.drawIds model.selectables ToggleSelect
         ]
 
 
-drawing : ( List DrawItem, Set ValueId ) -> List DrawId -> Html Msg
+drawing : ( List DrawItem.DrawItem, Set DrawItem.ValueId ) -> List DrawItem.DrawId -> Html Msg
 drawing selectables drawings =
     let
         sDrawItems =
@@ -122,46 +124,9 @@ drawing selectables drawings =
 
 
 
--- DrawItem
+-- SVG INPUT
 
 
-type alias DrawItem =
-    { drawId : DrawId
-    , valueId : ValueId
-    }
-
-
-type alias DrawId =
-    String
-
-
-type alias ValueId =
-    String
-
-
-drawItems : List DrawItem
-drawItems =
-    [ { drawId = "seat01", valueId = "1A" }
-    , { drawId = "seat02", valueId = "1B" }
-    , { drawId = "seat03", valueId = "2A" }
-
-    -- , { drawId = "seat04", valueId = "2B" }
-    , { drawId = "seat05", valueId = "3A" }
-    , { drawId = "seat06", valueId = "3B" }
-    ]
-
-
-selectedValueIds : Set ValueId
-selectedValueIds =
-    Set.fromList [ "2A", "3B" ]
-
-
-drawIds : List DrawId
-drawIds =
-    [ "seat01"
-    , "seat02"
-    , "seat03"
-    , "seat04"
-    , "seat05"
-    , "seat06"
-    ]
+generateSvgString : String
+generateSvgString =
+    """<svg width="181px" height="181px" viewbox="-0.5 -0.5 181 181"><g><rect id="seat01" x="0" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat02" x="0" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat03" x="100" y="0" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /><rect id="seat04" x="100" y="100" width="80" height="80" fill="#999999" stroke="#000000" pointer-events="all" /></g></svg>"""
