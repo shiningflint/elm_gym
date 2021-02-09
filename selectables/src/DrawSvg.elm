@@ -20,18 +20,19 @@ draw :
     -> (DrawItem.ValueId -> msg)
     -> Html msg
 draw svgString drawIds selectables toMsg =
-    stringToSvg svgString selectables toMsg
+    stringToSvg svgString drawIds selectables toMsg
 
 
 stringToSvg :
     String
+    -> List DrawItem.DrawId
     -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     -> (DrawItem.ValueId -> msg)
     -> Svg msg
-stringToSvg svgString selectables toMsg =
+stringToSvg svgString drawIds selectables toMsg =
     case SvgParser.parseToNode svgString of
         Ok sn ->
-            nodeToClickableSvg sn selectables toMsg
+            nodeToClickableSvg sn drawIds selectables toMsg
 
         Err e ->
             Svg.text <| "error: " ++ e
@@ -112,17 +113,21 @@ wireFillColor drawIdValue selectables elAttrs =
 -- SVG NODE OPERATION
 
 
-hasDrawIdValue : SvgAttribute -> Bool
-hasDrawIdValue ( name, value ) =
-    name == "id" && List.member value DrawItem.drawIds
+hasDrawIdValue :
+    SvgAttribute
+    -> List DrawItem.DrawId
+    -> Bool
+hasDrawIdValue ( name, value ) drawIds =
+    name == "id" && List.member value drawIds
 
 
 seatedAttributes :
-    ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    List DrawItem.DrawId
+    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     -> List SvgAttribute
     -> List SvgAttribute
-seatedAttributes selectables elAttrs =
-    case List.Extra.find hasDrawIdValue elAttrs of
+seatedAttributes drawIds selectables elAttrs =
+    case List.Extra.find (\( n, v ) -> hasDrawIdValue ( n, v ) drawIds) elAttrs of
         Nothing ->
             elAttrs
 
@@ -133,11 +138,12 @@ seatedAttributes selectables elAttrs =
 
 clickableAttribute :
     List SvgAttribute
+    -> List DrawItem.DrawId
     -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     -> (DrawItem.ValueId -> msg)
     -> List (Svg.Attribute msg)
-clickableAttribute elAttrs selectables toMsg =
-    case List.Extra.find hasDrawIdValue elAttrs of
+clickableAttribute elAttrs drawIds selectables toMsg =
+    case List.Extra.find (\( n, v ) -> hasDrawIdValue ( n, v ) drawIds) elAttrs of
         Nothing ->
             []
 
@@ -152,31 +158,33 @@ clickableAttribute elAttrs selectables toMsg =
 
 elementToClickableSvg :
     Element
+    -> List DrawItem.DrawId
     -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     -> (DrawItem.ValueId -> msg)
     -> Svg msg
-elementToClickableSvg element selectables toMsg =
+elementToClickableSvg element drawIds selectables toMsg =
     Svg.node element.name
-        ((seatedAttributes selectables element.attributes
+        ((seatedAttributes drawIds selectables element.attributes
             |> List.map SvgParser.toAttribute
          )
-            ++ clickableAttribute element.attributes selectables toMsg
+            ++ clickableAttribute element.attributes drawIds selectables toMsg
         )
         (List.map
-            (\svgNode -> nodeToClickableSvg svgNode selectables toMsg)
+            (\svgNode -> nodeToClickableSvg svgNode drawIds selectables toMsg)
             element.children
         )
 
 
 nodeToClickableSvg :
     SvgNode
+    -> List DrawItem.DrawId
     -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     -> (DrawItem.ValueId -> msg)
     -> Svg msg
-nodeToClickableSvg svgNode selectables toMsg =
+nodeToClickableSvg svgNode drawIds selectables toMsg =
     case svgNode of
         SvgElement element ->
-            elementToClickableSvg element selectables toMsg
+            elementToClickableSvg element drawIds selectables toMsg
 
         SvgText content ->
             Svg.text content

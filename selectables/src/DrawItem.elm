@@ -2,7 +2,6 @@ module DrawItem exposing
     ( DrawId
     , DrawItem
     , ValueId
-    , drawIds
     , drawItems
     , getValueId
     , isThisSeatTaken
@@ -57,12 +56,3 @@ drawItems =
 selectedValueIds : Set ValueId
 selectedValueIds =
     Set.fromList [ "1B", "1A", "2A" ]
-
-
-drawIds : List DrawId
-drawIds =
-    [ "seat01"
-    , "seat02"
-    , "seat03"
-    , "seat04"
-    ]

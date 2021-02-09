@@ -23,7 +23,7 @@ main =
 init : Config -> ( Model, Cmd Msg )
 init config =
     ( { selectables = ( DrawItem.drawItems, DrawItem.selectedValueIds )
-      , drawIds = DrawItem.drawIds
+      , drawIds = config.drawIds
       , svgString = Idle
       }
     , getSvgString config.svgSrc
@@ -42,7 +42,9 @@ type alias Model =
 
 
 type alias Config =
-    { svgSrc : String }
+    { svgSrc : String
+    , drawIds : List String
+    }
 
 
 type SvgString
