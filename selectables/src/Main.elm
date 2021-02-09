@@ -24,7 +24,7 @@ init : Config -> ( Model, Cmd Msg )
 init config =
     ( { selectables = ( DrawItem.drawItems, DrawItem.selectedValueIds )
       , drawIds = DrawItem.drawIds
-      , svgString = Nothing
+      , svgString = Idle
       }
     , getSvgString config.svgSrc
     )
@@ -37,12 +37,17 @@ init config =
 type alias Model =
     { selectables : ( List DrawItem.DrawItem, Set DrawItem.ValueId )
     , drawIds : List DrawItem.DrawId
-    , svgString : Maybe String
+    , svgString : SvgString
     }
 
 
 type alias Config =
     { svgSrc : String }
+
+
+type SvgString
+    = Idle
+    | SvgString (Result Http.Error String)
 
 
 
@@ -74,11 +79,8 @@ update msg model =
             in
             ( { model | selectables = ( sValueIds, newSselectedIds ) }, Cmd.none )
 
-        GotSvgString (Ok svgString) ->
-            ( { model | svgString = Just svgString }, Cmd.none )
-
-        GotSvgString (Err error) ->
-            ( { model | svgString = Nothing }, Cmd.none )
+        GotSvgString result ->
+            ( { model | svgString = SvgString result }, Cmd.none )
 
 
 getSvgString : String -> Cmd Msg
@@ -98,13 +100,38 @@ view model =
     let
         svgContent =
             case model.svgString of
-                Nothing ->
+                Idle ->
                     []
 
-                Just svgString ->
+                SvgString (Ok svgString) ->
                     [ DrawSvg.draw svgString model.drawIds model.selectables ToggleSelect ]
+
+                SvgString (Err httpError) ->
+                    [ svgHttpErrorView httpError ]
     in
     div [] svgContent
+
+
+svgHttpErrorView : Http.Error -> Html Msg
+svgHttpErrorView httpError =
+    case httpError of
+        Http.BadUrl url ->
+            text ("Http error: " ++ url)
+
+        Http.Timeout ->
+            text "Http error timeout"
+
+        Http.NetworkError ->
+            text "Http network error"
+
+        Http.BadStatus 404 ->
+            text "Error when fetching SVG URL. Not found."
+
+        Http.BadStatus status ->
+            text <| "Http error status: " ++ String.fromInt status
+
+        Http.BadBody body ->
+            text ("Http error: " ++ body)
 
 
 drawing : ( List DrawItem.DrawItem, Set DrawItem.ValueId ) -> List DrawItem.DrawId -> Html Msg

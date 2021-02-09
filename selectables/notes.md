@@ -11,8 +11,8 @@ Model =
 }
 
 Feature roadmap:
-- Error handling for http error
-- Error handling for Svg parse failure
+- ~~Error handling for http error~~
+- ~~Error handling for Svg parse failure~~
 - Disabled seat Set
 - Seat selection limit
 - Config colors:
