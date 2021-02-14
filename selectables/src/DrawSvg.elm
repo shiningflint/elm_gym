@@ -15,24 +15,22 @@ import SvgParser exposing (Element, SvgAttribute, SvgNode(..))
 
 draw :
     String
-    -> List DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> ( List DrawItem.DrawId, Set DrawItem.DrawId )
     -> (DrawItem.ValueId -> msg)
     -> Html msg
-draw svgString drawIds selectables toMsg =
-    stringToSvg svgString drawIds selectables toMsg
+draw svgString selectables toMsg =
+    stringToSvg svgString selectables toMsg
 
 
 stringToSvg :
     String
-    -> List DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> ( List DrawItem.DrawId, Set DrawItem.DrawId )
     -> (DrawItem.ValueId -> msg)
     -> Svg msg
-stringToSvg svgString drawIds selectables toMsg =
+stringToSvg svgString selectables toMsg =
     case SvgParser.parseToNode svgString of
         Ok sn ->
-            nodeToClickableSvg sn drawIds selectables toMsg
+            nodeToClickableSvg sn selectables toMsg
 
         Err e ->
             Svg.text <| "error: " ++ e
@@ -49,10 +47,10 @@ type SeatState
 
 getSeatState :
     DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> Set DrawItem.DrawId
     -> SeatState
-getSeatState drawIdValue selectables =
-    case DrawItem.isThisSeatTaken drawIdValue selectables of
+getSeatState drawIdValue set =
+    case DrawItem.isThisSeatTaken drawIdValue set of
         True ->
             Taken
 
@@ -90,13 +88,13 @@ setFillColor ( name, value ) seatColor =
 
 wireFillColor :
     DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> ( List DrawItem.DrawId, Set DrawItem.DrawId )
     -> List SvgAttribute
     -> List SvgAttribute
 wireFillColor drawIdValue selectables elAttrs =
     let
         seatColor =
-            getSeatState drawIdValue selectables
+            getSeatState drawIdValue (Tuple.second selectables)
                 |> getSeatColor
     in
     case List.Extra.find hasFill elAttrs of
@@ -122,12 +120,11 @@ hasDrawIdValue ( name, value ) drawIds =
 
 
 seatedAttributes :
-    List DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    ( List DrawItem.DrawId, Set DrawItem.DrawId )
     -> List SvgAttribute
     -> List SvgAttribute
-seatedAttributes drawIds selectables elAttrs =
-    case List.Extra.find (\( n, v ) -> hasDrawIdValue ( n, v ) drawIds) elAttrs of
+seatedAttributes selectables elAttrs =
+    case List.Extra.find (\( n, v ) -> hasDrawIdValue ( n, v ) (Tuple.first selectables)) elAttrs of
         Nothing ->
             elAttrs
 
@@ -138,53 +135,45 @@ seatedAttributes drawIds selectables elAttrs =
 
 clickableAttribute :
     List SvgAttribute
-    -> List DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
-    -> (DrawItem.ValueId -> msg)
+    -> ( List DrawItem.DrawId, Set DrawItem.DrawId )
+    -> (DrawItem.DrawId -> msg)
     -> List (Svg.Attribute msg)
-clickableAttribute elAttrs drawIds selectables toMsg =
-    case List.Extra.find (\( n, v ) -> hasDrawIdValue ( n, v ) drawIds) elAttrs of
+clickableAttribute elAttrs selectables toMsg =
+    case List.Extra.find (\( n, v ) -> hasDrawIdValue ( n, v ) (Tuple.first selectables)) elAttrs of
         Nothing ->
             []
 
-        Just el ->
-            case DrawItem.getValueId (Tuple.second el) (Tuple.first selectables) of
-                Nothing ->
-                    []
-
-                Just drawItemValue ->
-                    [ Svg.Events.onClick (toMsg drawItemValue.valueId) ]
+        Just ( name, value ) ->
+            [ Svg.Events.onClick (toMsg value) ]
 
 
 elementToClickableSvg :
     Element
-    -> List DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> ( List DrawItem.DrawId, Set DrawItem.DrawId )
     -> (DrawItem.ValueId -> msg)
     -> Svg msg
-elementToClickableSvg element drawIds selectables toMsg =
+elementToClickableSvg element selectables toMsg =
     Svg.node element.name
-        ((seatedAttributes drawIds selectables element.attributes
+        ((seatedAttributes selectables element.attributes
             |> List.map SvgParser.toAttribute
          )
-            ++ clickableAttribute element.attributes drawIds selectables toMsg
+            ++ clickableAttribute element.attributes selectables toMsg
         )
         (List.map
-            (\svgNode -> nodeToClickableSvg svgNode drawIds selectables toMsg)
+            (\svgNode -> nodeToClickableSvg svgNode selectables toMsg)
             element.children
         )
 
 
 nodeToClickableSvg :
     SvgNode
-    -> List DrawItem.DrawId
-    -> ( List DrawItem.DrawItem, Set DrawItem.ValueId )
+    -> ( List DrawItem.DrawId, Set DrawItem.DrawId )
     -> (DrawItem.ValueId -> msg)
     -> Svg msg
-nodeToClickableSvg svgNode drawIds selectables toMsg =
+nodeToClickableSvg svgNode selectables toMsg =
     case svgNode of
         SvgElement element ->
-            elementToClickableSvg element drawIds selectables toMsg
+            elementToClickableSvg element selectables toMsg
 
         SvgText content ->
             Svg.text content

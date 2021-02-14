@@ -22,8 +22,7 @@ main =
 
 init : Config -> ( Model, Cmd Msg )
 init config =
-    ( { selectables = ( DrawItem.drawItems, DrawItem.selectedValueIds )
-      , drawIds = config.drawIds
+    ( { selectables = ( config.selectableIds, Set.fromList config.selected )
       , svgString = Idle
       }
     , getSvgString config.svgSrc
@@ -35,15 +34,15 @@ init config =
 
 
 type alias Model =
-    { selectables : ( List DrawItem.DrawItem, Set DrawItem.ValueId )
-    , drawIds : List DrawItem.DrawId
+    { selectables : ( List DrawItem.DrawId, Set DrawItem.DrawId )
     , svgString : SvgString
     }
 
 
 type alias Config =
     { svgSrc : String
-    , drawIds : List String
+    , selectableIds : List DrawItem.DrawId
+    , selected : List DrawItem.DrawId
     }
 
 
@@ -106,7 +105,7 @@ view model =
                     []
 
                 SvgString (Ok svgString) ->
-                    [ DrawSvg.draw svgString model.drawIds model.selectables ToggleSelect ]
+                    [ DrawSvg.draw svgString model.selectables ToggleSelect ]
 
                 SvgString (Err httpError) ->
                     [ svgHttpErrorView httpError ]
@@ -134,48 +133,3 @@ svgHttpErrorView httpError =
 
         Http.BadBody body ->
             text ("Http error: " ++ body)
-
-
-drawing : ( List DrawItem.DrawItem, Set DrawItem.ValueId ) -> List DrawItem.DrawId -> Html Msg
-drawing selectables drawings =
-    let
-        sDrawItems =
-            Tuple.first selectables
-
-        sSelectedIds =
-            Tuple.second selectables
-
-        drawItem =
-            \drawId ->
-                let
-                    filteredDrawRecord =
-                        List.filter (\i -> i.drawId == drawId) sDrawItems
-
-                    htmlItem =
-                        case List.head filteredDrawRecord of
-                            Nothing ->
-                                div
-                                    [ class "item"
-                                    , class "disabled"
-                                    ]
-                                    [ span [] [ text "N/A" ] ]
-
-                            Just d ->
-                                let
-                                    selectedClass =
-                                        if Set.member d.valueId sSelectedIds then
-                                            class "selected"
-
-                                        else
-                                            class ""
-                                in
-                                div
-                                    [ class "item"
-                                    , selectedClass
-                                    , onClick <| ToggleSelect d.valueId
-                                    ]
-                                    [ span [] [ text d.valueId ] ]
-                in
-                htmlItem
-    in
-    div [ class "item-wrap" ] <| List.map drawItem drawings
