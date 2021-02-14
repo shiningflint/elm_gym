@@ -1,7 +1,11 @@
 module DrawItem exposing
     ( DrawId
     , DrawItem
+    , SeatState
+    , Selectables
     , ValueId
+    , getSeatColor
+    , getSeatState
     , getValueId
     , isThisSeatTaken
     )
@@ -20,6 +24,13 @@ type alias DrawItem =
     }
 
 
+type alias Selectables =
+    { selectableIds : List DrawId
+    , selected : Set DrawId
+    , disabled : Set DrawId
+    }
+
+
 type alias DrawId =
     String
 
@@ -28,9 +39,49 @@ type alias ValueId =
     String
 
 
-isThisSeatTaken : DrawId -> Set DrawId -> Bool
-isThisSeatTaken drawIdValue set =
-    Set.member drawIdValue set
+type SeatState
+    = Selected
+    | Untaken
+    | Taken
+
+
+
+-- SEAT TYPE LOGIC
+
+
+getSeatState : DrawId -> Set DrawId -> Set DrawId -> SeatState
+getSeatState drawIdValue set disabled =
+    if Set.member drawIdValue disabled then
+        Taken
+
+    else if Set.member drawIdValue set then
+        Selected
+
+    else
+        Untaken
+
+
+getSeatColor : SeatState -> String
+getSeatColor seatState =
+    case seatState of
+        Selected ->
+            "#BD2F2F"
+
+        Untaken ->
+            "#8DC5A4"
+
+        Taken ->
+            "#8E8E8E"
+
+
+isThisSeatTaken : SeatState -> Bool
+isThisSeatTaken seatState =
+    case seatState of
+        Taken ->
+            True
+
+        _ ->
+            False
 
 
 getValueId : DrawId -> List DrawItem -> Maybe DrawItem

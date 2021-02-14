@@ -22,7 +22,11 @@ main =
 
 init : Config -> ( Model, Cmd Msg )
 init config =
-    ( { selectables = ( config.selectableIds, Set.fromList config.selected )
+    ( { selectables =
+            { selectableIds = config.selectableIds
+            , selected = Set.fromList config.selected
+            , disabled = Set.fromList config.disabled
+            }
       , svgString = Idle
       }
     , getSvgString config.svgSrc
@@ -34,7 +38,7 @@ init config =
 
 
 type alias Model =
-    { selectables : ( List DrawItem.DrawId, Set DrawItem.DrawId )
+    { selectables : DrawItem.Selectables
     , svgString : SvgString
     }
 
@@ -43,6 +47,7 @@ type alias Config =
     { svgSrc : String
     , selectableIds : List DrawItem.DrawId
     , selected : List DrawItem.DrawId
+    , disabled : List DrawItem.DrawId
     }
 
 
@@ -65,20 +70,23 @@ update msg model =
     case msg of
         ToggleSelect valueId ->
             let
-                sValueIds =
-                    model.selectables |> Tuple.first
+                selected =
+                    model.selectables.selected
 
-                sSelectedIds =
-                    model.selectables |> Tuple.second
-
-                newSselectedIds =
-                    if Set.member valueId sSelectedIds then
-                        Set.remove valueId sSelectedIds
+                newSelected =
+                    if Set.member valueId selected then
+                        Set.remove valueId selected
 
                     else
-                        Set.insert valueId sSelectedIds
+                        Set.insert valueId selected
+
+                newSelectables =
+                    { selectableIds = model.selectables.selectableIds
+                    , selected = newSelected
+                    , disabled = model.selectables.disabled
+                    }
             in
-            ( { model | selectables = ( sValueIds, newSselectedIds ) }, Cmd.none )
+            ( { model | selectables = newSelectables }, Cmd.none )
 
         GotSvgString result ->
             ( { model | svgString = SvgString result }, Cmd.none )
