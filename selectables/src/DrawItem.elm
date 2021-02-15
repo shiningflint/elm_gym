@@ -8,6 +8,7 @@ module DrawItem exposing
     , getSeatState
     , getValueId
     , isThisSeatTaken
+    , toggleSelected
     )
 
 import List.Extra
@@ -82,6 +83,19 @@ isThisSeatTaken seatState =
 
         _ ->
             False
+
+
+
+-- SELECTION LOGIC
+
+
+toggleSelected : DrawId -> Set DrawId -> Set DrawId
+toggleSelected valueId selected =
+    if Set.member valueId selected then
+        Set.remove valueId selected
+
+    else
+        Set.insert valueId selected
 
 
 getValueId : DrawId -> List DrawItem -> Maybe DrawItem

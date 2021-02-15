@@ -70,15 +70,8 @@ update msg model =
     case msg of
         ToggleSelect valueId ->
             let
-                selected =
-                    model.selectables.selected
-
                 newSelected =
-                    if Set.member valueId selected then
-                        Set.remove valueId selected
-
-                    else
-                        Set.insert valueId selected
+                    DrawItem.toggleSelected valueId model.selectables.selected
 
                 newSelectables =
                     { selectableIds = model.selectables.selectableIds
