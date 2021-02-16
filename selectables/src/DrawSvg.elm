@@ -37,13 +37,13 @@ stringToSvg svgString selectables toMsg =
 
 
 
--- SEAT COLOR
+-- SEAT STYLING
 
 
-setFillColor : SvgAttribute -> String -> SvgAttribute
-setFillColor ( n, v ) seatColor =
-    if n == "fill" then
-        ( n, seatColor )
+setAttributeValue : SvgAttribute -> String -> String -> SvgAttribute
+setAttributeValue ( n, v ) attrName attrValue =
+    if n == attrName then
+        ( n, attrValue )
 
     else
         ( n, v )
@@ -66,8 +66,39 @@ wireFillColor drawIdValue selectables elAttrs =
 
         Just el ->
             List.map
-                (\( n, v ) -> setFillColor ( n, v ) seatColor)
+                (\( n, v ) -> setAttributeValue ( n, v ) "fill" seatColor)
                 elAttrs
+
+
+maxedSeat :
+    DrawItem.DrawId
+    -> Set DrawItem.DrawId
+    -> Int
+    -> List SvgAttribute
+    -> List SvgAttribute
+maxedSeat drawIdValue selected maxSelection elAttrs =
+    let
+        transparent =
+            "0.5"
+
+        maxedSeatAttrs =
+            case List.Extra.find (\( n, v ) -> n == "opacity") elAttrs of
+                Nothing ->
+                    elAttrs ++ [ ( "opacity", transparent ) ]
+
+                Just el ->
+                    List.map
+                        (\( n, v ) -> setAttributeValue ( n, v ) "opacity" transparent)
+                        elAttrs
+    in
+    if
+        DrawItem.notMaxed selected maxSelection
+            || Set.member drawIdValue selected
+    then
+        elAttrs
+
+    else
+        maxedSeatAttrs
 
 
 
@@ -92,8 +123,13 @@ seatedAttributes selectables elAttrs =
             elAttrs
 
         Just el ->
+            let
+                drawIdValue =
+                    Tuple.second el
+            in
             List.filter (\( n, v ) -> n /= "style") elAttrs
-                |> wireFillColor (Tuple.second el) selectables
+                |> maxedSeat drawIdValue selectables.selected selectables.maxSelection
+                |> wireFillColor drawIdValue selectables
 
 
 clickableAttribute :

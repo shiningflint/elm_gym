@@ -8,6 +8,7 @@ module DrawItem exposing
     , getSeatState
     , getValueId
     , isThisSeatTaken
+    , notMaxed
     , toggleSelected
     )
 
@@ -29,6 +30,7 @@ type alias Selectables =
     { selectableIds : List DrawId
     , selected : Set DrawId
     , disabled : Set DrawId
+    , maxSelection : Int
     }
 
 
@@ -89,13 +91,21 @@ isThisSeatTaken seatState =
 -- SELECTION LOGIC
 
 
-toggleSelected : DrawId -> Set DrawId -> Set DrawId
-toggleSelected valueId selected =
+toggleSelected : DrawId -> Set DrawId -> Int -> Set DrawId
+toggleSelected valueId selected maxSelection =
     if Set.member valueId selected then
         Set.remove valueId selected
 
-    else
+    else if notMaxed selected maxSelection then
         Set.insert valueId selected
+
+    else
+        selected
+
+
+notMaxed : Set DrawId -> Int -> Bool
+notMaxed selected maxSelection =
+    Set.size selected < maxSelection
 
 
 getValueId : DrawId -> List DrawItem -> Maybe DrawItem

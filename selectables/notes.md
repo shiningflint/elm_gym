@@ -14,13 +14,7 @@ Model =
 - ~~Error handling for http error~~
 - ~~Error handling for Svg parse failure~~
 - ~~Disabled seat Set~~
-
-- Seat selection limit
--- Default is one
--- If limit is down to zero, set opacity 0.5 of all seats except selected ones
--- Clicking any non-selected seats will change nothing
--- Clicking selected seat will unselect and can remove all opacity
-
+- ~~Seat selection limit~~
 
 - Config colors:
 -- Disabled color

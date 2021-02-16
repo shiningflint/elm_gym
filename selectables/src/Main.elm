@@ -26,6 +26,7 @@ init config =
             { selectableIds = config.selectableIds
             , selected = Set.fromList config.selected
             , disabled = Set.fromList config.disabled
+            , maxSelection = config.maxSelection
             }
       , svgString = Idle
       }
@@ -48,6 +49,7 @@ type alias Config =
     , selectableIds : List DrawItem.DrawId
     , selected : List DrawItem.DrawId
     , disabled : List DrawItem.DrawId
+    , maxSelection : Int
     }
 
 
@@ -71,12 +73,13 @@ update msg model =
         ToggleSelect valueId ->
             let
                 newSelected =
-                    DrawItem.toggleSelected valueId model.selectables.selected
+                    DrawItem.toggleSelected valueId model.selectables.selected model.selectables.maxSelection
 
                 newSelectables =
                     { selectableIds = model.selectables.selectableIds
                     , selected = newSelected
                     , disabled = model.selectables.disabled
+                    , maxSelection = model.selectables.maxSelection
                     }
             in
             ( { model | selectables = newSelectables }, Cmd.none )
