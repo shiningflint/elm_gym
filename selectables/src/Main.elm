@@ -7,10 +7,12 @@ import Html exposing (..)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Http
+import Json.Decode as D exposing (Decoder)
+import Json.Decode.Pipeline exposing (optional, required)
 import Set exposing (Set)
 
 
-main : Program Config Model Msg
+main : Program D.Value Model Msg
 main =
     Browser.element
         { init = init
@@ -20,28 +22,32 @@ main =
         }
 
 
-init : Config -> ( Model, Cmd Msg )
+init : D.Value -> ( Model, Cmd Msg )
 init config =
-    ( { selectables =
-            { selectableIds = config.selectableIds
-            , selected = Set.fromList config.selected
-            , disabled = Set.fromList config.disabled
-            , maxSelection = config.maxSelection
-            }
-      , svgString = Idle
-      }
-    , getSvgString config.svgSrc
-    )
+    case D.decodeValue configDecoder config of
+        Ok c ->
+            ( { selectables =
+                    Just
+                        { selectableIds = c.selectableIds
+                        , selected = Set.fromList c.selected
+                        , disabled = Set.fromList c.disabled
+                        , maxSelection = c.maxSelection
+                        }
+              , svgString = Idle
+              }
+            , getSvgString c.svgSrc
+            )
+
+        Err e ->
+            ( { selectables = Nothing
+              , svgString = Idle
+              }
+            , Cmd.none
+            )
 
 
 
--- MODEL
-
-
-type alias Model =
-    { selectables : DrawItem.Selectables
-    , svgString : SvgString
-    }
+-- CONFIG
 
 
 type alias Config =
@@ -50,6 +56,26 @@ type alias Config =
     , selected : List DrawItem.DrawId
     , disabled : List DrawItem.DrawId
     , maxSelection : Int
+    }
+
+
+configDecoder : Decoder Config
+configDecoder =
+    D.succeed Config
+        |> required "svgSrc" D.string
+        |> optional "selectableIds" (D.list D.string) []
+        |> optional "selected" (D.list D.string) []
+        |> optional "disabled" (D.list D.string) []
+        |> optional "maxSelection" D.int 1
+
+
+
+-- MODEL
+
+
+type alias Model =
+    { selectables : Maybe DrawItem.Selectables
+    , svgString : SvgString
     }
 
 
@@ -69,23 +95,27 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        ToggleSelect valueId ->
+    case ( msg, model.selectables ) of
+        ( ToggleSelect valueId, Just selectables ) ->
             let
                 newSelected =
-                    DrawItem.toggleSelected valueId model.selectables.selected model.selectables.maxSelection
+                    DrawItem.toggleSelected valueId selectables.selected selectables.maxSelection
 
                 newSelectables =
-                    { selectableIds = model.selectables.selectableIds
-                    , selected = newSelected
-                    , disabled = model.selectables.disabled
-                    , maxSelection = model.selectables.maxSelection
-                    }
+                    Just
+                        { selectableIds = selectables.selectableIds
+                        , selected = newSelected
+                        , disabled = selectables.disabled
+                        , maxSelection = selectables.maxSelection
+                        }
             in
             ( { model | selectables = newSelectables }, Cmd.none )
 
-        GotSvgString result ->
+        ( GotSvgString result, Just selectables ) ->
             ( { model | svgString = SvgString result }, Cmd.none )
+
+        ( _, _ ) ->
+            ( model, Cmd.none )
 
 
 getSvgString : String -> Cmd Msg
@@ -104,15 +134,20 @@ view : Model -> Html Msg
 view model =
     let
         svgContent =
-            case model.svgString of
-                Idle ->
-                    []
+            case model.selectables of
+                Nothing ->
+                    [ text "Fatal error, please check required fields" ]
 
-                SvgString (Ok svgString) ->
-                    [ DrawSvg.draw svgString model.selectables ToggleSelect ]
+                Just selectables ->
+                    case model.svgString of
+                        Idle ->
+                            []
 
-                SvgString (Err httpError) ->
-                    [ svgHttpErrorView httpError ]
+                        SvgString (Ok svgString) ->
+                            [ DrawSvg.draw svgString selectables ToggleSelect ]
+
+                        SvgString (Err httpError) ->
+                            [ svgHttpErrorView httpError ]
     in
     div [] svgContent
 

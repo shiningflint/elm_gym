@@ -15,6 +15,7 @@ Model =
 - ~~Error handling for Svg parse failure~~
 - ~~Disabled seat Set~~
 - ~~Seat selection limit~~
+- ~~Default values for missing keys in config~~
 
 - Config colors:
 -- Disabled color
