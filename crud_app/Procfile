@@ -1,0 +1,3 @@
+elm: elm-live src/Main.elm --no-server -- --output=dist/main.js
+web: http-server dist/ -p 8088
+api: json-server -p 3033 dist/db.json

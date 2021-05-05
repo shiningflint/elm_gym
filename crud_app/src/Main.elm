@@ -2,10 +2,18 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes exposing (type_, value)
+import Html.Attributes exposing (class, classList, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import User exposing (User)
+
+
+
+-- CONFIG
+
+
+base_url =
+    "http://localhost:3033/users"
 
 
 
@@ -13,7 +21,8 @@ import User exposing (User)
 
 
 type alias Model =
-    { title : Title
+    { page : Page
+    , title : Title
     , users : Status (List User)
     , user : Status User
     , userForm : User.UserForm
@@ -24,6 +33,11 @@ type alias Title =
     String
 
 
+type Page
+    = User
+    | Post
+
+
 type Status a
     = Loading
     | Loaded a
@@ -32,7 +46,8 @@ type Status a
 
 init : () -> ( Model, Cmd Msg )
 init flags =
-    ( { title = "User List"
+    ( { page = User
+      , title = "User List"
       , user = Waiting
       , users = Waiting
       , userForm = User.Idle
@@ -46,7 +61,8 @@ init flags =
 
 
 type Msg
-    = GetUser User
+    = GoToPage Page
+    | GetUser User
     | GetUsers
     | GotUser (Result Http.Error User)
     | GotUsers (Result Http.Error (List User))
@@ -65,6 +81,10 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        GoToPage page ->
+            -- set the page model to the current page type
+            ( { model | page = page }, Cmd.none )
+
         ClickedSave ->
             ( model, postUser <| User.formToUser <| User.getForm model.userForm )
 
@@ -167,7 +187,7 @@ update msg model =
 getUsers : Cmd Msg
 getUsers =
     Http.get
-        { url = "http://localhost:3000/users"
+        { url = base_url
         , expect = Http.expectJson GotUsers User.listDecoder
         }
 
@@ -175,7 +195,7 @@ getUsers =
 getUser : User -> Cmd Msg
 getUser user =
     Http.get
-        { url = "http://localhost:3000/users/" ++ User.idString user
+        { url = base_url ++ "/" ++ User.idString user
         , expect = Http.expectJson GotUser User.decoder
         }
 
@@ -183,7 +203,7 @@ getUser user =
 postUser : User -> Cmd Msg
 postUser user =
     Http.post
-        { url = "http://localhost:3000/users/"
+        { url = base_url
         , body = Http.stringBody "application/json" <| User.json user
         , expect = Http.expectString PostedUser
         }
@@ -193,7 +213,7 @@ putUser : User -> Cmd Msg
 putUser user =
     Http.request
         { method = "PUT"
-        , url = "http://localhost:3000/users/" ++ User.idString user
+        , url = base_url ++ "/" ++ User.idString user
         , expect = Http.expectString PuttedUser
         , timeout = Nothing
         , tracker = Nothing
@@ -206,7 +226,7 @@ deleteUser : User -> Cmd Msg
 deleteUser user =
     Http.request
         { method = "DELETE"
-        , url = "http://localhost:3000/users/" ++ User.idString user
+        , url = base_url ++ "/" ++ User.idString user
         , expect = Http.expectString DeletedUser
         , timeout = Nothing
         , tracker = Nothing
@@ -221,10 +241,23 @@ deleteUser user =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ headerView model.title
-        , bodyView model.users model.userForm
+    let
+        _ =
+            Debug.log "current page" model.page
+    in
+    div [ class "m-3" ]
+        [ navView
+        , headerView model.title
+        , bodyView model
         , userDetail model.user
+        ]
+
+
+navView : Html Msg
+navView =
+    nav [ class "d-flex" ]
+        [ div [ GoToPage User |> onClick, class "cursor-pointer mr-3" ] [ text "Users" ]
+        , div [ GoToPage Post |> onClick, class "cursor-pointer" ] [ text "Posts" ]
         ]
 
 
@@ -235,8 +268,15 @@ headerView title =
         ]
 
 
-bodyView : Status (List User) -> User.UserForm -> Html Msg
-bodyView users userForm =
+bodyView : Model -> Html Msg
+bodyView model =
+    div []
+        [ userBody model.users model.userForm
+        ]
+
+
+userBody : Status (List User) -> User.UserForm -> Html Msg
+userBody users userForm =
     let
         usersSection =
             case users of
